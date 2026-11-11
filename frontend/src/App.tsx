@@ -5,6 +5,7 @@ import { ResourcesPage } from "./pages/ResourcesPage";
 import { DoctorPage } from "./pages/DoctorPage";
 import { ModelsPage } from "./pages/ModelsPage";
 import { ChatPage } from "./pages/ChatPage";
+import { CodePage } from "./pages/CodePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
           {currentTab === "doctor" && <DoctorPage />}
           {currentTab === "models" && <ModelsPage />}
           {currentTab === "chat" && <ChatPage />}
+          {currentTab === "code" && <CodePage />}
           {currentTab === "code" && (
             <PlaceholderPage
               title="Kod Modu & Kumhavuzu (Code Mode)"
