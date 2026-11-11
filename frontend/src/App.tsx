@@ -10,6 +10,7 @@ import { AgentPage } from "./pages/AgentPage";
 import { PluginsPage } from "./pages/PluginsPage";
 import { GmailPage } from "./pages/GmailPage";
 import { REPage } from "./pages/REPage";
+import { TrainingPage } from "./pages/TrainingPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -46,13 +47,7 @@ export const App: React.FC = () => {
           {currentTab === "chat" && <ChatPage />}
           {currentTab === "code" && <CodePage />}
           {currentTab === "agent" && <AgentPage />}
-          {currentTab === "training" && (
-            <PlaceholderPage
-              title="Eğitim Stüdyosu (LoRA / QLoRA SFT)"
-              description="12 GB VRAM için optimize edilmiş 4-bit NF4 ince ayar, preflight dry-run ve GGUF dışa aktarımı."
-              phase="Faz 5"
-            />
-          )}
+          {currentTab === "training" && <TrainingPage />}
           {currentTab === "re" && <REPage />}
           {currentTab === "gmail" && <GmailPage />}
           {currentTab === "plugins" && <PluginsPage />}
