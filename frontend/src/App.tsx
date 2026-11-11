@@ -3,6 +3,8 @@ import { Navbar } from "./components/Navbar";
 import { Sidebar, NavTab } from "./components/Sidebar";
 import { ResourcesPage } from "./pages/ResourcesPage";
 import { DoctorPage } from "./pages/DoctorPage";
+import { ModelsPage } from "./pages/ModelsPage";
+import { ChatPage } from "./pages/ChatPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -35,20 +37,8 @@ export const App: React.FC = () => {
             <ResourcesPage statusData={statusData} onRefresh={loadStatus} />
           )}
           {currentTab === "doctor" && <DoctorPage />}
-          {currentTab === "models" && (
-            <PlaceholderPage
-              title="Model Yöneticisi & Yerleşim (Offload) Planlayıcı"
-              description="GGUF ve HuggingFace modellerini indirme, VRAM/RAM katman yerleşimi ve otomatik profil optimizasyonu."
-              phase="Faz 2"
-            />
-          )}
-          {currentTab === "chat" && (
-            <PlaceholderPage
-              title="Sohbet (Chat)"
-              description="Açık ağırlıklı modellerle düşük gecikmeli canlı token akışı ve parametrik üretim."
-              phase="Faz 2"
-            />
-          )}
+          {currentTab === "models" && <ModelsPage />}
+          {currentTab === "chat" && <ChatPage />}
           {currentTab === "code" && (
             <PlaceholderPage
               title="Kod Modu & Kumhavuzu (Code Mode)"

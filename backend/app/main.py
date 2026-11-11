@@ -1,8 +1,15 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any, cast
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
+from app.api.v1.openai_compat import v1_router
 from app.core.config import settings
 from app.core.errors import (
     GiggleException,
@@ -12,10 +19,6 @@ from app.core.errors import (
 from app.core.logger import logger, setup_logging
 from app.db.session import init_db
 from app.utils.hardware import HardwareDetector
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
 
 @asynccontextmanager
@@ -62,11 +65,12 @@ app.add_middleware(
 )
 
 # Error handlers
-app.add_exception_handler(GiggleException, giggle_exception_handler)
-app.add_exception_handler(Exception, generic_exception_handler)
+app.add_exception_handler(GiggleException, cast(Any, giggle_exception_handler))
+app.add_exception_handler(Exception, cast(Any, generic_exception_handler))
 
 # Include main API router
 app.include_router(api_router)
+app.include_router(v1_router)
 
 # Mount frontend build if it exists
 frontend_dist = Path("frontend/dist")
