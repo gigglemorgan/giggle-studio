@@ -8,6 +8,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { CodePage } from "./pages/CodePage";
 import { AgentPage } from "./pages/AgentPage";
 import { PluginsPage } from "./pages/PluginsPage";
+import { GmailPage } from "./pages/GmailPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -58,13 +59,7 @@ export const App: React.FC = () => {
               phase="Faz 4c & 4d"
             />
           )}
-          {currentTab === "gmail" && (
-            <PlaceholderPage
-              title="Gmail Entegrasyonu"
-              description="Yerel OAuth 2.0 PKCE, şifreli anahtarlık saklama ve onaylı e-posta araçları."
-              phase="Faz 4b"
-            />
-          )}
+          {currentTab === "gmail" && <GmailPage />}
           {currentTab === "plugins" && <PluginsPage />}
           {currentTab === "settings" && (
             <PlaceholderPage
