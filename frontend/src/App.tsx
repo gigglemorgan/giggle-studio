@@ -9,6 +9,7 @@ import { CodePage } from "./pages/CodePage";
 import { AgentPage } from "./pages/AgentPage";
 import { PluginsPage } from "./pages/PluginsPage";
 import { GmailPage } from "./pages/GmailPage";
+import { REPage } from "./pages/REPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -52,13 +53,7 @@ export const App: React.FC = () => {
               phase="Faz 5"
             />
           )}
-          {currentTab === "re" && (
-            <PlaceholderPage
-              title="Tersine Mühendislik (Reverse Engineering)"
-              description="Statik ikili analizi, çağrı çizgesi özetleyicisi ve kanıt alıntılı yapay zeka analiz raporları."
-              phase="Faz 4c & 4d"
-            />
-          )}
+          {currentTab === "re" && <REPage />}
           {currentTab === "gmail" && <GmailPage />}
           {currentTab === "plugins" && <PluginsPage />}
           {currentTab === "settings" && (
