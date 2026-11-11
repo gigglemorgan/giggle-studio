@@ -1,12 +1,13 @@
 import gc
 import shutil
 import sys
-from typing import Any, cast
+from typing import Any
+
+from fastapi import APIRouter
 
 from app.core.config import settings
 from app.core.logger import redact_dict
 from app.utils.hardware import HardwareDetector
-from fastapi import APIRouter
 
 router = APIRouter(prefix="/system", tags=["System"])
 
@@ -145,7 +146,7 @@ async def run_doctor_diagnostics() -> dict[str, Any]:
         "checks": checks,
     }
     # Ensure all output is redacted
-    return cast(dict[str, Any], redact_dict(report))
+    return redact_dict(report)
 
 
 @router.post("/free-memory")

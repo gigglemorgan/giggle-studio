@@ -1,16 +1,17 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
-# Import entities to ensure they are registered with Base metadata
-import app.db.models.entities  # noqa: F401
-from app.core.config import settings
-from app.db.base import Base
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+
+# Import entities to ensure they are registered with Base metadata
+import app.db.models.entities  # noqa: F401
+from app.core.config import settings
+from app.db.base import Base
 
 # Build SQLite async URL
 sqlite_path = settings.storage.sqlite_path

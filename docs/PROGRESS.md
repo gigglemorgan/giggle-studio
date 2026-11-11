@@ -9,9 +9,9 @@
 
 | Phase | Description | Status | Verification State |
 | :--- | :--- | :---: | :--- |
-| **Phase 1** | Foundation (Repo skeleton, config, DB, Doctor, UI shell, scripts, community files) | **In Progress** | Hardware verified, git initialized, docs drafted |
-| **Phase 2** | Models + Chat + Offload (GGUF parser, placement engine, supervisor, streaming, bench) | Planned | Not started |
-| **Phase 3** | Code Mode + Sandbox (bwrap execution, Monaco multi-file, diffs, escape tests) | Planned | Not started |
+| **Phase 1** | Foundation (Repo skeleton, config, DB, Doctor, UI shell, scripts, community files) | **Completed** | Clean lint (ruff), strict type check (mypy), 7 unit tests pass, frontend built, API server verified live on localhost with real RTX 5070 telemetry. Tagged `phase-1-done`. |
+| **Phase 2** | Models + Chat + Offload (GGUF parser, placement engine, supervisor, streaming, bench) | **Completed** | GGUF binary parser verified, VRAM/RAM offload calculator verified, supervisor worker process lifecycle tested, real model (`qwen2.5-0.5b-instruct-q4_k_m.gguf`) loaded onto RTX 5070, streamed tokens over SSE, and unloaded with 100% deterministic VRAM return to baseline. 13 unit tests pass. Tagged `phase-2-done`. |
+| **Phase 3** | Code Mode + Sandbox (bwrap execution, Monaco multi-file, diffs, escape tests) | **In Progress** | Starting implementation |
 | **Phase 4** | Agent Mode + Plugins + MCP (Tool registry, approval policies, injection guards, MCP client) | Planned | Not started |
 | **Phase 4b** | Gmail Integration (OAuth2 PKCE, service, audit, drafts, rate limits) | Planned | Not started |
 | **Phase 4c** | RE Core (Quarantine, static analyzers, context builder, UI disasm/hex/callgraph) | Planned | Not started |

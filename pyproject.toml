@@ -78,6 +78,8 @@ ignore = ["B008", "E501", "N818"]
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = ["backend"]
+explicit_package_bases = true
 strict = true
 disallow_subclassing_any = false
 warn_unused_configs = true
