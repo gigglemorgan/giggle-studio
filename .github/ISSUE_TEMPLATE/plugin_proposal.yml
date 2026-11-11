@@ -1,0 +1,19 @@
+name: "Plugin Proposal"
+description: "Propose a new first-party or community plugin for Giggle Studio"
+title: "[PLUGIN]: "
+labels: ["plugin"]
+body:
+  - type: textarea
+    id: plugin_name
+    attributes:
+      label: Plugin Name & Identifier
+      description: e.g., `giggle.ghidra-bridge`
+    validations:
+      required: true
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: Proposed Tools & Capabilities
+      description: List the tools, permissions, and sandbox requirements.
+    validations:
+      required: true

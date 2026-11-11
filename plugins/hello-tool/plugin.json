@@ -1,0 +1,17 @@
+{
+  "id": "giggle.hello-tool",
+  "name": "Hello Tool Reference Plugin",
+  "version": "1.0.0",
+  "description": "Example reference tool plugin demonstrating schema definition and execution.",
+  "author": "Sedat-gigglemorgan",
+  "min_app_version": "0.1.0",
+  "entrypoint": "main.py",
+  "permissions": [],
+  "tools": [
+    {
+      "name": "hello_greet",
+      "description": "Returns a friendly greeting string.",
+      "risk_level": "safe"
+    }
+  ]
+}

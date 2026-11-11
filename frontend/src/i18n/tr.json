@@ -1,0 +1,53 @@
+{
+  "app": {
+    "title": "Giggle Studio",
+    "subtitle": "Yerel LLM ve Tersine Mühendislik Çalışma Alanı",
+    "status_online": "Çevrimiçi",
+    "status_offline": "Çevrimdışı"
+  },
+  "nav": {
+    "dashboard": "Kaynaklar",
+    "models": "Model Yöneticisi",
+    "chat": "Sohbet",
+    "code": "Kod Modu",
+    "agent": "Agent Modu",
+    "training": "Eğitim Stüdyosu",
+    "re": "Tersine Mühendislik",
+    "gmail": "Gmail",
+    "plugins": "Eklentiler & MCP",
+    "doctor": "Sistem Doktoru",
+    "settings": "Ayarlar"
+  },
+  "resources": {
+    "title": "Sistem ve Donanım Kaynakları",
+    "gpu_title": "Ekran Kartı (GPU)",
+    "cpu_title": "İşlemci (CPU)",
+    "ram_title": "Sistem Belleği (RAM)",
+    "swap_title": "Takas Alanı (Swap)",
+    "disk_title": "Depolama Alanı",
+    "free_memory_button": "Belleği Temizle",
+    "free_memory_success": "Bellek başarıyla temizlendi.",
+    "vram_usage": "VRAM Kullanımı",
+    "gpu_temp": "Sıcaklık",
+    "gpu_power": "Güç Tüketimi",
+    "gpu_util": "GPU Yükü"
+  },
+  "doctor": {
+    "title": "Sistem Teşhisi ve Sağlık Durumu",
+    "run_diagnostics": "Yeniden Tara",
+    "status_healthy": "Sistem Sağlıklı",
+    "status_warning": "Uyarılar Mevcut",
+    "target": "Beklenen",
+    "measured": "Ölçülen Değer",
+    "fix": "Çözüm Önerisi"
+  },
+  "common": {
+    "refresh": "Yenile",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "success": "Başarılı"
+  }
+}

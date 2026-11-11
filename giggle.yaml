@@ -1,0 +1,64 @@
+# Giggle Studio Application Configuration (giggle.yaml)
+# Overridden by environment variables prefixed with GIGGLE_
+
+app:
+  name: "Giggle Studio"
+  version: "0.1.0"
+  author: "Sedat-gigglemorgan"
+  language: "tr" # Default UI language (tr = Turkish)
+
+server:
+  host: "127.0.0.1"
+  port: 8420
+  workers: 1
+  cors_origins:
+    - "http://127.0.0.1:8420"
+    - "http://localhost:8420"
+    - "http://127.0.0.1:5173"
+    - "http://localhost:5173"
+
+storage:
+  data_dir: "./data"
+  sqlite_path: "./data/giggle.db"
+  models_dir: "./data/models"
+  datasets_dir: "./data/datasets"
+  workspaces_dir: "./data/workspaces"
+  quarantine_dir: "./data/quarantine"
+  logs_dir: "./data/logs"
+
+hardware:
+  preferred_vendor: "nvidia"
+  exclude_vendors:
+    - "amd"
+  vram_safety_margin_mb: 600
+  ram_ceiling_percent: 85
+  default_cpu_threads: 6
+
+inference:
+  default_backend: "llama_cpp"
+  default_context_length: 4096
+  default_batch_size: 512
+  default_ubatch_size: 128
+  flash_attention: true
+  kv_cache_k: "f16"
+  kv_cache_v: "f16"
+
+openai_compat:
+  enabled: false
+  api_key: null
+
+sandbox:
+  enabled: true
+  backend: "bwrap" # bwrap | unshare | rlimit
+  timeout_seconds: 30
+  max_output_bytes: 1048576 # 1 MB
+  allow_network: false
+
+gmail:
+  enabled: false
+  send_rate_limit_per_hour: 10
+  store_bodies: false
+
+plugins:
+  enabled: true
+  directory: "./data/plugins"
