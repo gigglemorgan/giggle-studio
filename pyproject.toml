@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "giggle-studio"
+version = "0.1.0"
+description = "Self-hosted local-first open-weight LLM studio and binary analysis workbench"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = "Apache-2.0"
+authors = [
+    { name = "Sedat-gigglemorgan" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "greenlet>=3.0.0",
+    "alembic>=1.13.0",
+    "aiosqlite>=0.20.0",
+    "sse-starlette>=2.1.0",
+    "httpx>=0.27.0",
+    "pyyaml>=6.0.1",
+    "cryptography>=43.0.0",
+    "keyring>=25.3.0",
+    "pynvml>=11.5.0",
+    "psutil>=6.0.0",
+    "pyelftools>=0.31",
+    "pefile>=2023.2.7",
+    "capstone>=5.0.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.4.0",
+    "transformers>=4.44.0",
+    "peft>=0.12.0",
+    "trl>=0.9.6",
+    "datasets>=2.20.0",
+    "accelerate>=0.33.0",
+    "bitsandbytes>=0.43.0",
+]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "types-pyyaml>=6.0.12",
+]
+
+[project.scripts]
+giggle = "giggle_studio.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["app*", "giggle_studio*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N"]
+ignore = ["B008", "E501", "N818"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+disallow_subclassing_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["backend/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "gpu: marks tests requiring NVIDIA GPU hardware (skipped in standard CI)",
+    "integration: marks integration tests",
+]

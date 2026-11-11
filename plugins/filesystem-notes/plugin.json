@@ -1,0 +1,24 @@
+{
+  "id": "giggle.filesystem-notes",
+  "name": "Filesystem Notes Plugin",
+  "version": "1.0.0",
+  "description": "Demonstrates scoped filesystem access for managing markdown notes.",
+  "author": "Sedat-gigglemorgan",
+  "min_app_version": "0.1.0",
+  "entrypoint": "main.py",
+  "permissions": [
+    "filesystem:data/notes"
+  ],
+  "tools": [
+    {
+      "name": "save_note",
+      "description": "Saves a text note into the notes workspace.",
+      "risk_level": "write"
+    },
+    {
+      "name": "list_notes",
+      "description": "Lists existing notes.",
+      "risk_level": "safe"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "giggle.mcp-bridge",
+  "name": "MCP Bridge Reference",
+  "version": "1.0.0",
+  "description": "Demonstrates connecting external Model Context Protocol (MCP) stdio servers.",
+  "author": "Sedat-gigglemorgan",
+  "min_app_version": "0.1.0",
+  "entrypoint": "main.py",
+  "permissions": [
+    "subprocess:stdio"
+  ]
+}

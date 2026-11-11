@@ -1,0 +1,36 @@
+name: "Bug Report"
+description: "File an issue about a bug or unexpected error in Giggle Studio"
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue!
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Start application with 'scripts/run.sh'
+        2. Go to '...'
+        3. Click '...'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: Redacted Doctor Diagnostics
+      description: Run `python3 scripts/doctor.py` and paste the output here (paths/usernames are auto-redacted).
+      render: shell
+    validations:
+      required: true

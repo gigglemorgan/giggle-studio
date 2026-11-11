@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Giggle Studio in your research or wish to refer to this software, please cite it as below."
+title: "Giggle Studio: Self-Hosted Local-First Open-Weight LLM & Reverse Engineering Workbench"
+authors:
+  - name: "Sedat-gigglemorgan"
+version: 0.1.0
+date-released: 2026-11-12
+license: Apache-2.0
+repository-code: "https://github.com/Sedat-gigglemorgan/giggle-studio"
+keywords:
+  - "llm"
+  - "lora"
+  - "qlora"
+  - "reverse-engineering"
+  - "local-ai"
+  - "privacy"
+  - "gpu-offload"
