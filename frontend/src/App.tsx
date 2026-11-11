@@ -6,6 +6,8 @@ import { DoctorPage } from "./pages/DoctorPage";
 import { ModelsPage } from "./pages/ModelsPage";
 import { ChatPage } from "./pages/ChatPage";
 import { CodePage } from "./pages/CodePage";
+import { AgentPage } from "./pages/AgentPage";
+import { PluginsPage } from "./pages/PluginsPage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
@@ -41,20 +43,7 @@ export const App: React.FC = () => {
           {currentTab === "models" && <ModelsPage />}
           {currentTab === "chat" && <ChatPage />}
           {currentTab === "code" && <CodePage />}
-          {currentTab === "code" && (
-            <PlaceholderPage
-              title="Kod Modu & Kumhavuzu (Code Mode)"
-              description="Monaco editörü, Bubblewrap yalıtımlı Python/Shell yürütme ve diff onaylama."
-              phase="Faz 3"
-            />
-          )}
-          {currentTab === "agent" && (
-            <PlaceholderPage
-              title="Agent Modu (Otonom Ajan)"
-              description="Planla -> Araç Çağır -> Gözlemle döngüsü, insan onay politikaları ve prompt-injection savunması."
-              phase="Faz 4"
-            />
-          )}
+          {currentTab === "agent" && <AgentPage />}
           {currentTab === "training" && (
             <PlaceholderPage
               title="Eğitim Stüdyosu (LoRA / QLoRA SFT)"
@@ -76,13 +65,7 @@ export const App: React.FC = () => {
               phase="Faz 4b"
             />
           )}
-          {currentTab === "plugins" && (
-            <PlaceholderPage
-              title="Eklentiler & MCP İstemcisi"
-              description="Birinci parti eklentiler, bildirimli izin denetimi ve Model Context Protocol (stdio/SSE)."
-              phase="Faz 4"
-            />
-          )}
+          {currentTab === "plugins" && <PluginsPage />}
           {currentTab === "settings" && (
             <PlaceholderPage
               title="Ayarlar"
