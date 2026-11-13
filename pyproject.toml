@@ -36,6 +36,7 @@ dependencies = [
     "pyyaml>=6.0.1",
     "cryptography>=43.0.0",
     "keyring>=25.3.0",
+    "python-multipart>=0.0.9",
     "pynvml>=11.5.0",
     "psutil>=6.0.0",
     "pyelftools>=0.31",
