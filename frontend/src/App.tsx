@@ -11,7 +11,7 @@ import { PluginsPage } from "./pages/PluginsPage";
 import { GmailPage } from "./pages/GmailPage";
 import { REPage } from "./pages/REPage";
 import { TrainingPage } from "./pages/TrainingPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { SystemStatusResponse, fetchSystemStatus } from "./lib/api";
 
 export const App: React.FC = () => {
@@ -51,13 +51,7 @@ export const App: React.FC = () => {
           {currentTab === "re" && <REPage />}
           {currentTab === "gmail" && <GmailPage />}
           {currentTab === "plugins" && <PluginsPage />}
-          {currentTab === "settings" && (
-            <PlaceholderPage
-              title="Ayarlar"
-              description="Sunucu parametreleri, veri yolları, OpenAI uyumluluk anahtarları ve izinler."
-              phase="Faz 1 / Devam"
-            />
-          )}
+          {currentTab === "settings" && <SettingsPage />}
         </main>
       </div>
     </div>
