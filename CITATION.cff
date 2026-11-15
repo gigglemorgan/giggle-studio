@@ -6,7 +6,7 @@ authors:
 version: 0.1.0
 date-released: 2026-11-12
 license: Apache-2.0
-repository-code: "https://github.com/Sedat-gigglemorgan/giggle-studio"
+repository-code: "https://github.com/gigglemorgan/giggle-studio"
 keywords:
   - "llm"
   - "lora"

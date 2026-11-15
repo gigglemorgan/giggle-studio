@@ -15,7 +15,7 @@ Thank you for your interest in contributing to Giggle Studio! We welcome contrib
 
 2. **Clone & Setup:**
    ```bash
-   git clone https://github.com/Sedat-gigglemorgan/giggle-studio.git
+   git clone https://github.com/gigglemorgan/giggle-studio.git
    cd giggle-studio
    ./scripts/setup.sh
    ```

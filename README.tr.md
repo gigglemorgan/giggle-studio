@@ -35,7 +35,7 @@ Giggle Studio, özellikle 12 GB VRAM ve 16 GB RAM sınırlarına sahip modern do
 
 ```bash
 # 1. Projeyi klonlayın
-git clone https://github.com/Sedat-gigglemorgan/giggle-studio.git
+git clone https://github.com/gigglemorgan/giggle-studio.git
 cd giggle-studio
 
 # 2. Otomatik kurulum betiğini çalıştırın

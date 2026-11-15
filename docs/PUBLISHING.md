@@ -19,8 +19,8 @@ git status
 ## 2. Configure Git Identity
 Set your desired GitHub noreply email address locally:
 ```bash
-git config user.name "Sedat-gigglemorgan"
-git config user.email "<your-github-id>+Sedat-gigglemorgan@users.noreply.github.com"
+git config user.name "gigglemorgan"
+git config user.email "<your-github-id>+gigglemorgan@users.noreply.github.com"
 ```
 
 ---
@@ -29,7 +29,7 @@ git config user.email "<your-github-id>+Sedat-gigglemorgan@users.noreply.github.
 1. Log in to [GitHub](https://github.com).
 2. Create a new repository:
    - **Repository name:** `giggle-studio`
-   - **Owner:** `Sedat-gigglemorgan`
+   - **Owner:** `gigglemorgan`
    - **Description:** "Self-hosted local-first open-weight LLM studio, fine-tuning environment, and defensive reverse engineering workbench"
    - **Visibility:** Public (or Private until you review)
    - **Do NOT initialize with README, .gitignore, or license** (these already exist in the repo).
@@ -39,7 +39,7 @@ git config user.email "<your-github-id>+Sedat-gigglemorgan@users.noreply.github.
 ## 4. Push Code to GitHub
 In your local repository root, link the remote and push:
 ```bash
-git remote add origin git@github.com:Sedat-gigglemorgan/giggle-studio.git
+git remote add origin git@github.com:gigglemorgan/giggle-studio.git
 git branch -M main
 git push -u origin main --tags
 ```

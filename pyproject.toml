@@ -22,6 +22,11 @@ classifiers = [
     "Topic :: Security",
 ]
 
+[project.urls]
+Homepage = "https://github.com/gigglemorgan/giggle-studio"
+Repository = "https://github.com/gigglemorgan/giggle-studio"
+Issues = "https://github.com/gigglemorgan/giggle-studio/issues"
+
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",

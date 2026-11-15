@@ -9,7 +9,7 @@ Giggle Studio takes security and privacy seriously. As a tool designed for local
 **Please do not report security vulnerabilities via public GitHub issues.**
 
 To report a vulnerability:
-1. Navigate to the repository's **Security** tab on GitHub.
+1. Navigate to the repository's **Security** tab on GitHub ([Report a vulnerability](https://github.com/gigglemorgan/giggle-studio/security/advisories/new)).
 2. Click **Report a vulnerability** to open a private GitHub Security Advisory.
 3. Provide details including:
    - Summary and type of vulnerability (e.g. sandbox escape, prompt injection bypass, token leakage)

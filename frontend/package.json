@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "author": "Sedat-gigglemorgan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gigglemorgan/giggle-studio.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

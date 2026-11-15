@@ -9,8 +9,8 @@ Welcome to the Giggle Studio support page.
   - `docs/DECISIONS.md` - Architectural decision records
   - `docs/GMAIL_SETUP.md` - Setting up Google Cloud OAuth for Gmail
   - `docs/OFFLOAD_GUIDE.md` - VRAM and RAM allocation strategies
-- **GitHub Discussions:** Use GitHub Discussions for questions, configuration advice, and sharing model profiles.
-- **GitHub Issues:** Use GitHub Issues for bug reports and feature requests. Please run `giggle doctor` or `./scripts/doctor.py` and attach the redacted output.
+- **GitHub Discussions:** Use [GitHub Discussions](https://github.com/gigglemorgan/giggle-studio/discussions) for questions, configuration advice, and sharing model profiles.
+- **GitHub Issues:** Use [GitHub Issues](https://github.com/gigglemorgan/giggle-studio/issues) for bug reports and feature requests. Please run `giggle doctor` or `./scripts/doctor.py` and attach the redacted output.
 
 ## System Doctor
 

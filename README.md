@@ -40,7 +40,7 @@ Giggle Studio is engineered specifically to operate reliably on constrained mode
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Sedat-gigglemorgan/giggle-studio.git
+git clone https://github.com/gigglemorgan/giggle-studio.git
 cd giggle-studio
 
 # 2. Run the automated setup script
