@@ -11,7 +11,7 @@ def test_settings_default_values():
     assert settings.server.port == 8420
     assert settings.hardware.vram_safety_margin_mb == 600
     assert settings.hardware.ram_ceiling_percent == 85
-    assert "amd" in settings.hardware.exclude_vendors
+    assert settings.hardware.preferred_vendor == "nvidia"
 
 
 def test_settings_load_from_yaml(tmp_path: Path):

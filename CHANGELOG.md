@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration engine powered by Pydantic Settings supporting `giggle.yaml` and `.env`.
 - Database architecture on SQLite (WAL, FTS5) with SQLAlchemy 2.0 and Alembic migrations.
 - Structured JSON logging with automatic redaction of credentials, usernames, and paths.
-- Hardware detector with NVML resolution for NVIDIA RTX 5070 and exclusion of AMD GPU.
+- Hardware detector with NVML resolution for NVIDIA RTX 5070 and subprocess GPU pinning.
 - Sandboxed execution architecture based on Linux Bubblewrap (`bwrap`).
 - REST API foundations with standard error envelope `{error: {code, message_tr, detail, hint}}`.
 - Diagnostic Doctor CLI and UI endpoint with automated privacy redactions.

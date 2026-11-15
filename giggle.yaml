@@ -28,8 +28,7 @@ storage:
 
 hardware:
   preferred_vendor: "nvidia"
-  exclude_vendors:
-    - "amd"
+  exclude_vendors: []
   vram_safety_margin_mb: 600
   ram_ceiling_percent: 85
   default_cpu_threads: 6

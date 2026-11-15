@@ -28,7 +28,7 @@
 - **CPU:** Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz (6 physical cores, 12 threads, AVX2 enabled)
 - **RAM:** 15.8 GiB Total (16 GB physical), 8.0 GiB available, 23 GiB Swap
 - **Primary GPU:** NVIDIA GeForce RTX 5070 12GB VRAM (Blackwell sm_120, Driver: 595.104.02, CUDA 13.2 support reported by driver)
-- **Secondary GPU:** AMD Radeon RX 550 (Permanently isolated and excluded via `CUDA_VISIBLE_DEVICES=0` and NVML pinning)
+- **GPU Pinning:** NVML-based detection resolves NVIDIA RTX 5070 index and injects `CUDA_VISIBLE_DEVICES=0` into all worker environments
 - **Sandbox Primitives:** `/usr/bin/bwrap` and `/usr/bin/unshare` verified present and operational.
 - **Node.js:** v22.23.3, npm: 10.9.9
 - **Python:** 3.12.3 with virtual environment in `.venv/`.

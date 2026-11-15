@@ -36,7 +36,7 @@ class HardwareDetector:
 
     @classmethod
     def get_nvidia_device_info(cls) -> dict[str, Any]:
-        """Resolves the NVIDIA GPU index, strictly ignoring any AMD GPU."""
+        """Resolves the NVIDIA GPU index and sets CUDA_VISIBLE_DEVICES."""
         if cls._nvidia_device_index is not None and cls._nvidia_device_name is not None:
             return {
                 "available": True,

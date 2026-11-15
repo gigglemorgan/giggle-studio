@@ -51,7 +51,7 @@ class StorageSettings(BaseSettings):
 
 class HardwareSettings(BaseSettings):
     preferred_vendor: str = "nvidia"
-    exclude_vendors: list[str] = ["amd"]
+    exclude_vendors: list[str] = Field(default_factory=list)
     vram_safety_margin_mb: int = 600
     ram_ceiling_percent: int = 85
     default_cpu_threads: int = 6

@@ -30,10 +30,10 @@ This document records the foundational architectural, security, and licensing de
 
 ---
 
-## ADR-003: Dual GPU Handling & Dedicated RTX 5070 Pinning
+## ADR-003: GPU Handling & Dedicated RTX 5070 Pinning
 - **Status:** Accepted
 - **Context:**
-  The target host has an NVIDIA GeForce RTX 5070 (12 GB, Blackwell sm_120) and a secondary AMD Radeon RX 550. Mixing ROCm/CUDA or allowing PyTorch to discover the AMD card causes runtime failure or degraded performance.
+  The target host has an NVIDIA GeForce RTX 5070 (12 GB, Blackwell sm_120). We must guarantee all worker subprocesses reliably pin to the resolved NVIDIA hardware index.
 - **Decision:**
   - Query NVML at startup to find the exact PCIe index of the NVIDIA GeForce RTX 5070.
   - In every worker subprocess (inference, training, RE, benchmarks), explicitly set the environment variable:

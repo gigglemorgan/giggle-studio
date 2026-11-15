@@ -114,7 +114,7 @@ print("GIGGLE_TRAINING_FINISHED", flush=True)
         script_path = cls.generate_worker_script(run_id, config)
         run_dir = script_path.parent
 
-        # Inject NVIDIA GPU isolation (exclude AMD RX 550)
+        # Inject NVIDIA GPU isolation and visibility
         gpu_env = HardwareDetector.get_cuda_visible_devices_env()
         env = dict(os.environ)
         env.update(gpu_env)
