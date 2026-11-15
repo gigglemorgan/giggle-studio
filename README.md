@@ -9,22 +9,50 @@
 
 ---
 
-## Key Features
+## Key Features & Status
 
-- **Resource-Aware Inference Engine:** Dedicated worker process with deterministic memory cleanup. GGUF execution via `llama.cpp` and Safetensors via Hugging Face Transformers & `bitsandbytes`.
-- **Advanced GPU/CPU Placement & Offload:** Interactive layer-by-layer offload planner, VRAM/RAM allocation predictor, KV-cache quantization (f16, q8_0, q4_0), MoE CPU expert offload, and auto-tuning benchmark ladder.
-- **Autonomous Agent & Code Mode:** Sandboxed execution via Linux Bubblewrap (`bwrap`), multi-file Monaco editor, step-by-step human approval policies, and strict prompt-injection defenses.
-- **Training Studio (LoRA / QLoRA SFT):** 4-bit NF4 training, automated memory preflight dry-runs, RAM safety guards, live loss curves, checkpointing, and GGUF quantization export.
-- **Defensive Reverse Engineering Suite:** Quarantined no-exec sample store, static inspection (ELF/PE/mach-o), bottom-up call-graph summarization with evidence citations, and YARA/Sigma rule drafting.
-- **Gmail Integration:** Private OAuth 2.0 PKCE desktop flow, encrypted token storage in OS keyring, granular read/write permissions, and human-verified send actions.
+| Category | Capability | Status |
+| :--- | :--- | :---: |
+| **Inference Engine** | Dedicated supervised worker process with deterministic memory cleanup | Implemented |
+| | GGUF model execution via `llama.cpp` (CUDA sm_120 & CPU fallback) | Implemented |
+| | OpenAI-compatible `/v1/chat/completions` endpoint | Implemented |
+| | Safetensors via Hugging Face Transformers & `bitsandbytes` | Planned |
+| **Placement & Offload** | Interactive layer-by-layer offload planner with VRAM/RAM allocation predictor | Implemented |
+| | KV-cache quantization (f16, q8_0, q4_0) | Implemented |
+| | Auto-tuning benchmark ladder (`giggle bench`) | Implemented |
+| | MoE CPU expert offload | Planned |
+| **Agent & Code Mode** | Sandboxed execution via Linux Bubblewrap (`bwrap`) | Implemented |
+| | Multi-file Monaco code editor with workspace file tree | Implemented |
+| | Step-by-step human approval policies (`safe`, `write`, `exec`, `network`) | Implemented |
+| | Strict prompt-injection defense with demarcated blocks | Implemented |
+| | Model Context Protocol (MCP) JSON-RPC stdio client | Implemented |
+| **Training Studio** | Analytical memory preflight dry-run estimator | Implemented |
+| | Multi-format dataset processor (Alpaca, ShareGPT, OpenAI) | Implemented |
+| | Isolated SFT training subprocess with live SSE loss/VRAM curves | Implemented |
+| | LoRA adapter merge and Hugging Face model card generation | Implemented |
+| | Standalone GGUF quantization export after merge | Planned |
+| | Optional Unsloth accelerator integration | Planned |
+| **Defensive RE Suite** | Quarantined `0400` sample storage by SHA-256 | Implemented |
+| | Static inspection for ELF and PE binaries with section entropy | Implemented |
+| | Capstone x86/x64 disassembly | Implemented |
+| | Bottom-up call-graph analysis and topological summarization | Implemented |
+| | AI function summaries with opcode hash caching | Implemented |
+| | Automated defensive YARA rule generator | Implemented |
+| | Sandboxed transient dynamic analysis (`bwrap`) | Implemented |
+| | Mach-O binary parsing & Sigma rule drafting | Planned |
+| | Vector semantic code search across binaries | Planned |
+| **Gmail Integration** | Desktop OAuth 2.0 PKCE loopback authentication | Implemented |
+| | Encrypted token storage (Fernet + OS keyring) | Implemented |
+| | Granular audit logging (`gmail_audit`) and message caching | Implemented |
+| | Human-verified draft composition and sending | Implemented |
 
 ---
 
-## Hardware Requirements & Tested Baseline
+## Hardware Requirements & Platform Baseline
 
 Giggle Studio is engineered specifically to operate reliably on constrained modern hardware:
 
-| Component | Tested Primary System | Minimum Supported |
+| Component | Developed on | Minimum Supported |
 | :--- | :--- | :--- |
 | **Operating System** | Pop!_OS 24.04 (Linux x86_64) | Linux (kernel >= 5.15) with bubblewrap |
 | **GPU** | NVIDIA GeForce RTX 5070 (12 GB VRAM, sm_120) | NVIDIA GPU (8 GB+ VRAM) or CPU fallback |

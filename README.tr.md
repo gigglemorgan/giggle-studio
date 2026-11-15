@@ -9,25 +9,56 @@
 
 ---
 
-## Öne Çıkan Özellikler
+## Özellikler ve Geliştirme Durumu
 
-- **Kaynak Farkındalıklı Çıkarım (Inference):** Ana sunucudan yalıtılmış çalışan bağımsız işçi süreci. Model kapatıldığında VRAM'in OS seviyesinde sıfırlanması garantilenir. GGUF (`llama.cpp`) ve Hugging Face Transformers (`bitsandbytes` 4-bit) tam desteklenir.
-- **Gelişmiş GPU/CPU Yerleşim Kontrolü:** Katman katman VRAM/RAM tahminleyicisi, KV-bellek kuantizasyonu (f16, q8_0, q4_0), MoE uzmanlarının CPU'ya aktarımı ve otomatik kıyaslama (benchmark) tüneli.
-- **Kod Modu & Agent Modu:** Bubblewrap tabanlı güvenli Linux kumhavuzu (sandbox), çok dosyalı Monaco editörü, insan onayına dayalı eylem onay politikaları ve prompt-injection korumaları.
-- **Eğitim Stüdyosu (LoRA / QLoRA SFT):** 12 GB VRAM sınırına uygun 4-bit NF4 ince ayar, bellek taşmasını önceden tespit eden deneme sürüşü (preflight), canlı kayıp (loss) grafikleri ve GGUF dışa aktarımı.
-- **Savunmacı Tersine Mühendislik:** Karantinaya alınan yürütülemez örnek havuzu, statik ELF/PE analizi, çağrı çizgesi (call-graph) özetleyicisi ve doğrulanabilir kanıt alıntıları.
-- **Gmail Entegrasyonu:** Kullanıcının kendi Google Cloud projesi ile OAuth 2.0 PKCE yetkilendirmesi, OS anahtarlığında şifreli saklanan belirteçler ve onaylı e-posta gönderimi.
+| Kategori | Yetenek | Durum |
+| :--- | :--- | :---: |
+| **Çıkarım Motoru (Inference)** | OS düzeyinde bellek iadesi sağlayan süpervizörlü bağımsız işçi süreci | Implemented |
+| | `llama.cpp` ile GGUF model çalıştırma (CUDA sm_120 ve CPU yedekleme) | Implemented |
+| | OpenAI uyumlu `/v1/chat/completions` uç noktası | Implemented |
+| | Hugging Face Transformers ve `bitsandbytes` ile Safetensors çalıştırma | Planned |
+| **Yerleşim & Offload** | Katman katman VRAM/RAM tahminleyicisi ve interaktif yerleşim paneli | Implemented |
+| | KV-bellek kuantizasyonu (f16, q8_0, q4_0) | Implemented |
+| | Otomatik kıyaslama merdiveni (`giggle bench`) | Implemented |
+| | MoE uzman katmanlarının CPU'ya aktarımı | Planned |
+| **Kod & Ajan Modu** | Linux Bubblewrap (`bwrap`) ile yalıtılmış kumhavuzu (sandbox) | Implemented |
+| | Çok dosyalı Monaco editörü ve çalışma alanı ağacı | Implemented |
+| | Adım adım insan onayı politikaları (`safe`, `write`, `exec`, `network`) | Implemented |
+| | Ayrıştırılmış veri blokları ile prompt injection savunması | Implemented |
+| | Model Context Protocol (MCP) JSON-RPC stdio istemcisi | Implemented |
+| **Eğitim Stüdyosu (Training)** | Analitik bellek preflight deneme sürüşü hesaplayıcısı | Implemented |
+| | Çoklu veri kümesi ayrıştırıcı (Alpaca, ShareGPT, OpenAI formatları) | Implemented |
+| | Canlı SSE kayıp/VRAM grafikleri ile yalıtılmış SFT eğitim alt süreci | Implemented |
+| | LoRA adaptör birleştirme ve Hugging Face model kartı üretimi | Implemented |
+| | Birleştirme sonrası bağımsız GGUF kuantizasyon ihracı | Planned |
+| | İsteğe bağlı Unsloth hızlandırma eklentisi | Planned |
+| **Savunmacı Tersine Mühendislik** | SHA-256 tabanlı `0400` salt-okunur karantina havuzu | Implemented |
+| | ELF ve PE ikili dosyaları için statik analiz ve kesit entropisi | Implemented |
+| | Capstone ile x86/x64 ayrıştırıcı (disassembly) | Implemented |
+| | Çağrı çizgesi (call-graph) analizi ve tabandan yukarı özetleme | Implemented |
+| | İşlem kodu (opcode) hash önbellekli yapay zeka fonksiyon özetleri | Implemented |
+| | Otomatik savunmacı YARA kuralı üretici | Implemented |
+| | Geçici kumhavuzu dinamik analizi (`bwrap`) | Implemented |
+| | Mach-O ayrıştırma ve Sigma kuralı taslaklama | Planned |
+| | Vektörel anlamsal kod arama | Planned |
+| **Gmail Entegrasyonu** | Masaüstü OAuth 2.0 PKCE döngüsel yetkilendirmesi | Implemented |
+| | OS anahtarlığında şifreli belirteç saklama (Fernet + keyring) | Implemented |
+| | Ayrıntılı denetim günlüğü (`gmail_audit`) ve ileti önbelleği | Implemented |
+| | İnsan onaylı taslak oluşturma ve e-posta gönderimi | Implemented |
 
 ---
 
-## Test Edilen Donanım ve Sistem Gereksinimleri
+## Geliştirme Yapılan Sistem ve Donanım Gereksinimleri
 
 Giggle Studio, özellikle 12 GB VRAM ve 16 GB RAM sınırlarına sahip modern donanımlarda kararlı çalışacak şekilde geliştirilmiştir:
 
-- **İşletim Sistemi:** Pop!_OS 24.04 (Ubuntu tabanlı Linux)
-- **Ekran Kartı (GPU):** NVIDIA GeForce RTX 5070 (12 GB VRAM, Blackwell mimarisi)
-- **İşlemci (CPU):** Intel Core i5-10400F (6 Çekirdek / 12 İzlek)
-- **Sistem Belleği (RAM):** 16 GB (Bellekte aynı anda iki model tutulmaz, RAM %85 tavan koruması mevcuttur)
+| Bileşen | Geliştirme Yapılan Sistem | Desteklenen Asgari |
+| :--- | :--- | :--- |
+| **İşletim Sistemi** | Pop!_OS 24.04 (Linux x86_64) | Linux (çekirdek >= 5.15) ve bubblewrap |
+| **Ekran Kartı (GPU)** | NVIDIA GeForce RTX 5070 (12 GB VRAM, sm_120) | NVIDIA GPU (8 GB+ VRAM) veya CPU yedekleme |
+| **İşlemci (CPU)** | Intel Core i5-10400F (6 Çekirdek / 12 İzlek) | AVX2 destekli 4 çekirdekli x86_64 |
+| **Sistem Belleği (RAM)** | 16 GB DDR4 | 16 GB önerilir (%85 tavan koruması) |
+| **Depolama** | NVMe SSD (hızlı) + HDD (veri havuzu) | Modeller için en az 20 GB boş disk alanı |
 
 ---
 
