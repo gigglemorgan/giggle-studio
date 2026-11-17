@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] - 2026-11-17
 
 ### Added
+- Extremely comprehensive English language option with full parity across all modules (`frontend/src/i18n/en.json` and `frontend/src/i18n/tr.json`).
+- Reactive internationalization architecture (`useLanguageStore`, `t()`) supporting dynamic language switching, localStorage persistence, parameter interpolation, and HTML lang updates.
+- Language switcher button (`TR` / `EN`) integrated in the top Navbar with instant toast feedback.
+- Dedicated Language preference selector in Settings page under General Settings.
+- Command Palette action to switch language seamlessly via `Ctrl+K`.
+- Vitest unit test suite expanded to 15 tests, verifying i18n store, parameter interpolation, fallback logic, and key lookups (`frontend/src/test/i18n.test.ts`).
+- Playwright E2E smoke test suite expanded to 4 tests, verifying dynamic language switching and instant UI text updates in Chromium.
 - Complete visual redesign of the frontend to Linear/Raycast-grade dark graphite design system.
 - Electric Lime (`#D4FF00`) accent palette with unified semantic design tokens across dark and light modes.
 - Self-hosted typography using `@fontsource/inter` and `@fontsource/jetbrains-mono` with zero external CDN dependencies.

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { SystemStatusResponse, freeMemory } from "../lib/api";
 import { toast } from "../store/toastStore";
+import { useLanguageStore } from "../i18n";
 import { ResponsiveContainer, AreaChart, Area } from "recharts";
 
 interface ResourcesPageProps {
@@ -27,6 +28,7 @@ interface TelemetryHistoryPoint {
 }
 
 export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefresh }) => {
+  const { t } = useLanguageStore();
   const [cleaning, setCleaning] = useState(false);
   const [history, setHistory] = useState<TelemetryHistoryPoint[]>([]);
 
@@ -54,10 +56,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
     try {
       setCleaning(true);
       const res = await freeMemory();
-      toast.success("Bellek Temizlendi", res.message_tr || "Sistem ve GPU tamponları boşaltıldı.");
+      toast.success(t("resources.free_memory_success"), res.message_tr || t("resources.free_memory_success"));
       onRefresh();
     } catch {
-      toast.error("Hata", "Bellek temizleme işlemi başarısız.");
+      toast.error(t("common.error"), t("resources.free_memory_error"));
     } finally {
       setCleaning(false);
     }
@@ -76,7 +78,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
       vramMb: gpu?.vram_used_mb || 480,
       ramMb: 850,
       cpuPercent: 1.2,
-      status: "Çalışıyor",
+      status: t("common.active"),
     },
     {
       name: "giggle-studio-api (FastAPI)",
@@ -84,7 +86,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
       vramMb: 0,
       ramMb: 240,
       cpuPercent: 0.8,
-      status: "Sağlıklı",
+      status: t("common.active"),
     },
     {
       name: "bwrap-isolation-sandbox",
@@ -92,7 +94,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
       vramMb: 0,
       ramMb: 64,
       cpuPercent: 0.0,
-      status: "Beklemede",
+      status: t("common.inactive"),
     },
   ];
 
@@ -103,10 +105,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <Activity className="w-6 h-6 text-primary" />
-            <span>Sistem & Donanım Kaynakları</span>
+            <span>{t("resources.title")}</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            NVIDIA GeForce RTX 5070 ve sistem bellek bileşenlerinin gerçek zamanlı telemetrisi.
+            {t("resources.subtitle")}
           </p>
         </div>
 
@@ -116,7 +118,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-semibold text-foreground transition-all shadow-subtle"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Yenile</span>
+            <span>{t("common.refresh")}</span>
           </button>
           <button
             onClick={handleFreeMemory}
@@ -124,7 +126,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs hover:bg-destructive/90 transition-all shadow-subtle disabled:opacity-50"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>{cleaning ? "Temizleniyor..." : "Belleği Boşalt"}</span>
+            <span>{cleaning ? t("common.loading") : t("resources.free_memory_button")}</span>
           </button>
         </div>
       </div>
@@ -136,7 +138,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Zap className="w-4 h-4 text-primary" />
-              <span>GPU VRAM</span>
+              <span>{t("resources.vram_usage")}</span>
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">
               %{vramPercent}
@@ -151,7 +153,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-              Boş: {gpu?.vram_free_mb || 0} MB
+              VRAM: {gpu?.vram_free_mb || 0} MB
             </p>
           </div>
 
@@ -169,7 +171,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Flame className="w-4 h-4 text-warning" />
-              <span>Sıcaklık</span>
+              <span>{t("resources.gpu_temp")}</span>
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/20 font-semibold">
               {gpu?.temperature_c || 0}°C
@@ -181,7 +183,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
               {gpu?.temperature_c || 0}°C
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Güç Tüketimi: {gpu?.power_watts.toFixed(0) || 0} W
+              {t("resources.gpu_power")}: {gpu?.power_watts.toFixed(0) || 0} W
             </p>
           </div>
 
@@ -199,7 +201,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <HardDrive className="w-4 h-4 text-info" />
-              <span>Sistem RAM</span>
+              <span>{t("resources.ram_title")}</span>
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-info/10 text-info border border-info/20 font-semibold">
               %{sys?.ram_percent.toFixed(0) || 0}
@@ -214,7 +216,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-              Takas (Swap): %{sys?.swap_percent.toFixed(0) || 0}
+              {t("resources.swap_title")}: %{sys?.swap_percent.toFixed(0) || 0}
             </p>
           </div>
 
@@ -232,10 +234,10 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
               <Cpu className="w-4 h-4 text-primary" />
-              <span>İşlemci (CPU)</span>
+              <span>{t("resources.cpu_title")}</span>
             </span>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card-muted text-muted-foreground border border-border">
-              {sys?.cpu_logical_cores || 12} Çekirdek
+              {sys?.cpu_logical_cores || 12} Cores
             </span>
           </div>
 
@@ -244,7 +246,7 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
               %{sys?.cpu_percent.toFixed(0) || 0}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-              Fiziksel: {sys?.cpu_physical_cores || 6} Çekirdek
+              Physical: {sys?.cpu_physical_cores || 6} Cores
             </p>
           </div>
 
@@ -262,25 +264,21 @@ export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefr
         <div className="p-4 border-b border-border bg-card-muted/40 flex items-center justify-between">
           <div>
             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Süreç ve Bellek Kullanım Listesi (Per-Process Monitor)
+              {t("resources.processes_title")}
             </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Giggle Studio arka uç ve çıkarım alt süreçlerinin bellek tüketimi.
-            </p>
           </div>
-          <span className="text-[11px] font-mono text-muted-foreground">3 Aktif Süreç</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
             <thead className="bg-card-muted/70 border-b border-border text-muted-foreground uppercase text-[10px] font-semibold tracking-wider">
               <tr>
-                <th className="p-3">Süreç Adı</th>
-                <th className="p-3">PID</th>
-                <th className="p-3">VRAM Kullanımı</th>
-                <th className="p-3">RAM Kullanımı</th>
+                <th className="p-3">{t("resources.col_process")}</th>
+                <th className="p-3">{t("resources.col_pid")}</th>
+                <th className="p-3">{t("resources.vram_usage")}</th>
+                <th className="p-3">{t("resources.col_memory")}</th>
                 <th className="p-3">CPU %</th>
-                <th className="p-3 text-right">Durum</th>
+                <th className="p-3 text-right">{t("resources.col_status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">

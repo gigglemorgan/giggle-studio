@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Switch } from "../components/ui/Switch";
 import { toast } from "../store/toastStore";
+import { useLanguageStore } from "../i18n";
 
 interface OffloadPlannerProps {
   model: {
@@ -25,6 +26,7 @@ interface OffloadPlannerProps {
 }
 
 export const OffloadPlanner: React.FC<OffloadPlannerProps> = ({ model, onLoadModel, onClose }) => {
+  const { t } = useLanguageStore();
   const [gpuLayers, setGpuLayers] = useState<number>(34);
   const [nCtx, setNCtx] = useState<number>(model.context_length || 4096);
   const [kvK, setKvK] = useState<string>("f16");
@@ -141,7 +143,7 @@ export const OffloadPlanner: React.FC<OffloadPlannerProps> = ({ model, onLoadMod
             </div>
             <div>
               <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                <span>VRAM / RAM Yerleşim Planlayıcı</span>
+                <span>{t("models.offload_planner_title")}</span>
                 <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
                   Hero Engine
                 </span>

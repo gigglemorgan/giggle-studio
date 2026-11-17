@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertCircle, RefreshCw, HelpCircle, LucideIcon, Sparkles } from "lucide-react";
+import { t } from "../../i18n";
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -51,12 +52,13 @@ interface FriendlyErrorProps {
 }
 
 export const FriendlyError: React.FC<FriendlyErrorProps> = ({
-  title = "İşlem Tamamlanamadı",
+  title,
   message,
   fixHint,
   onRetry,
   className = "",
 }) => {
+  const displayTitle = title || t("status_states.error_title");
   return (
     <div
       className={`flex items-start gap-3.5 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-card-foreground my-3 ${className}`}
@@ -66,13 +68,13 @@ export const FriendlyError: React.FC<FriendlyErrorProps> = ({
         <AlertCircle className="w-4 h-4 stroke-[2]" />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="text-xs font-semibold text-destructive">{title}</h4>
+        <h4 className="text-xs font-semibold text-destructive">{displayTitle}</h4>
         <p className="text-xs text-foreground/80 mt-0.5 leading-relaxed break-words">{message}</p>
         {fixHint && (
           <div className="mt-2.5 p-2 rounded-md bg-background/80 border border-border text-[11px] text-muted-foreground flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-primary shrink-0" />
             <span>
-              <strong className="text-foreground">Çözüm İpucu:</strong> {fixHint}
+              <strong className="text-foreground">{t("status_states.fix_hint_label")}</strong> {fixHint}
             </span>
           </div>
         )}
@@ -82,7 +84,7 @@ export const FriendlyError: React.FC<FriendlyErrorProps> = ({
             className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border bg-card hover:bg-card-muted text-foreground transition-colors"
           >
             <RefreshCw className="w-3 h-3" />
-            Tekrar Dene
+            {t("common.retry")}
           </button>
         )}
       </div>

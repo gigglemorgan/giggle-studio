@@ -11,10 +11,12 @@ import {
 import { OffloadPlanner } from "../features/OffloadPlanner";
 import { useModelStore } from "../store/modelStore";
 import { toast } from "../store/toastStore";
+import { useLanguageStore } from "../i18n";
 import { EmptyState, Skeleton } from "../components/ui/StatusStates";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/Dialog";
 
 export const ModelsPage: React.FC = () => {
+  const { t } = useLanguageStore();
   const { activeStatus, fetchActiveStatus } = useModelStore();
 
   const [localModels, setLocalModels] = useState<any[]>([]);
@@ -131,19 +133,19 @@ export const ModelsPage: React.FC = () => {
   const getVramFit = (sizeMb: number) => {
     if (sizeMb <= 10000) {
       return {
-        label: "VRAM'e Tam Sığar",
+        label: t("models.vram_fit_green"),
         status: "safe",
         classes: "bg-success/15 text-success border-success/30",
       };
     } else if (sizeMb <= 14000) {
       return {
-        label: "Kısmi Offload (VRAM + RAM)",
+        label: t("models.vram_fit_amber"),
         status: "warn",
         classes: "bg-warning/15 text-warning border-warning/30",
       };
     } else {
       return {
-        label: "Aşırı Büyük (RAM Ağırlıklı)",
+        label: t("models.vram_fit_red"),
         status: "danger",
         classes: "bg-destructive/15 text-destructive border-destructive/30",
       };
@@ -157,10 +159,10 @@ export const ModelsPage: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
               <Layers className="w-6 h-6 text-primary" />
-              <span>Model Yönetimi & Yerleşim Stüdyosu</span>
+              <span>{t("models.title")}</span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Yerel GGUF modellerinizi yönetin, Hugging Face'ten indirin ve RTX 5070 VRAM yerleşimini optimize edin.
+              {t("models.subtitle")}
             </p>
           </div>
 
@@ -171,14 +173,14 @@ export const ModelsPage: React.FC = () => {
               className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-medium text-foreground transition-all shadow-subtle"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin text-primary" : ""}`} />
-              <span>{scanning ? "Taranıyor..." : "Dizini Tara"}</span>
+              <span>{scanning ? t("common.loading") : t("common.refresh")}</span>
             </button>
             <button
               onClick={() => setShowHfDialog(true)}
               className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-subtle"
             >
               <DownloadCloud className="w-4 h-4" />
-              <span>Hugging Face İndir</span>
+              <span>{t("models.btn_download_hf")}</span>
             </button>
           </div>
         </div>
@@ -189,7 +191,7 @@ export const ModelsPage: React.FC = () => {
             <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Model adına göre filtrele..."
+              placeholder={t("models.search_placeholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
@@ -202,7 +204,7 @@ export const ModelsPage: React.FC = () => {
               className={`p-1.5 rounded transition-colors ${
                 viewMode === "grid" ? "bg-primary text-primary-foreground shadow-subtle" : "text-muted-foreground hover:text-foreground"
               }`}
-              title="Izgara Görünümü"
+              title={t("models.btn_view_grid")}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
@@ -211,7 +213,7 @@ export const ModelsPage: React.FC = () => {
               className={`p-1.5 rounded transition-colors ${
                 viewMode === "list" ? "bg-primary text-primary-foreground shadow-subtle" : "text-muted-foreground hover:text-foreground"
               }`}
-              title="Liste Görünümü"
+              title={t("models.btn_view_list")}
             >
               <List className="w-3.5 h-3.5" />
             </button>

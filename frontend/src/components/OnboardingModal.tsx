@@ -10,6 +10,7 @@ import { Sparkles, Cpu, Download, MessageSquare, ArrowRight, CheckCircle2 } from
 import confetti from "canvas-confetti";
 import { SystemStatusResponse } from "../lib/api";
 import { toast } from "../store/toastStore";
+import { useLanguageStore } from "../i18n";
 
 interface OnboardingModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   statusData,
   onNavigateToChat,
 }) => {
+  const { t } = useLanguageStore();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -93,10 +95,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
           <GiggleLogo size={48} className="mx-auto mb-3 drop-shadow-md" />
           <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-            Giggle Studio'ya Hoş Geldiniz!
+            {t("onboarding.title")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            Hızlı, gizlilik odaklı, yerel LLM ve tersine mühendislik çalışma ortamınız.
+            {t("onboarding.subtitle")}
           </DialogDescription>
         </div>
 
@@ -105,29 +107,29 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <div className="space-y-4 animate-fade-in">
               <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
                 <Cpu className="w-4 h-4" />
-                <span>Adım 1: Donanım Algılama</span>
+                <span>{t("onboarding.step1_title")}</span>
               </div>
               <div className="p-4 rounded-xl bg-card-muted/60 border border-border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">Birincil Hızlandırıcı:</span>
+                  <span className="text-xs text-muted-foreground">{t("onboarding.gpu_detected")}:</span>
                   <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
                     {gpuName}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Kullanılabilir Video Belleği (VRAM):</span>
+                  <span className="text-xs text-muted-foreground">{t("onboarding.vram_available")}:</span>
                   <span className="text-xs font-mono font-semibold text-primary">{vramGb} GB</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Sisteminiz yerel çıkarım ve QLoRA eğitimi için son derece uygun bir donanıma sahip. Şimdi hızlı bir test modeli yapılandıralım.
+                {t("onboarding.step1_desc")}
               </p>
               <button
                 onClick={() => setStep(2)}
                 className="w-full mt-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-subtle"
               >
-                <span>Önerilen Modeli İncele</span>
+                <span>{t("common.next")}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -137,24 +139,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <div className="space-y-4 animate-fade-in">
               <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
-                <span>Adım 2: Hızlı Başlangıç Modeli</span>
+                <span>{t("onboarding.step2_title")}</span>
               </div>
               <div className="p-4 rounded-xl bg-card-muted/60 border border-border space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">Qwen2.5-0.5B-Instruct</span>
+                  <span className="text-sm font-semibold text-foreground">{t("onboarding.starter_model_name")}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] bg-primary/15 text-primary border border-primary/20 font-mono">
                     ~390 MB
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Hızlı yanıt süreleri ve düşük bellek tüketimi için ideal, yerel testlerinizde anında kullanabileceğiniz hafif bir model.
+                  {t("onboarding.starter_model_desc")}
                 </p>
               </div>
 
               {downloading ? (
                 <div className="space-y-2 py-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>HuggingFace üzerinden indiriliyor...</span>
+                    <span>{t("onboarding.btn_downloading", { progress: downloadProgress })}</span>
                     <span className="font-mono text-primary">{downloadProgress}%</span>
                   </div>
                   <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
@@ -170,14 +172,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     onClick={() => setStep(3)}
                     className="flex-1 py-2 px-3 rounded-lg border border-border hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Atla
+                    {t("onboarding.btn_skip")}
                   </button>
                   <button
                     onClick={handleStartDownload}
                     className="flex-[2] py-2 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-subtle"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Tek Tıkla İndir & Kur</span>
+                    <span>{t("onboarding.btn_download_start")}</span>
                   </button>
                 </div>
               )}
@@ -189,16 +191,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <div className="w-12 h-12 rounded-full bg-success/15 border border-success/30 flex items-center justify-center text-success mx-auto">
                 <CheckCircle2 className="w-6 h-6 stroke-[2]" />
               </div>
-              <h3 className="text-sm font-semibold text-foreground">Her Şey Hazır!</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("onboarding.step3_title")}</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                Giggle Studio yerel çıkarım, kod stüdyosu, otonom agent ve tersine mühendislik araçlarıyla kullanıma hazır.
+                {t("onboarding.step3_desc")}
               </p>
               <button
                 onClick={handleFinish}
                 className="w-full py-2.5 px-4 rounded-lg bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-accent-glow"
               >
                 <MessageSquare className="w-4 h-4" />
-                <span>Sohbete Başla</span>
+                <span>{t("onboarding.btn_continue_chat")}</span>
               </button>
             </div>
           )}

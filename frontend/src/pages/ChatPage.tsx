@@ -23,6 +23,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import { useModelStore } from "../store/modelStore";
 import { toast } from "../store/toastStore";
+import { useLanguageStore } from "../i18n";
 import { EmptyState } from "../components/ui/StatusStates";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/Dialog";
 import { TooltipProvider } from "../components/ui/Tooltip";
@@ -61,6 +62,7 @@ const SYSTEM_PRESETS = [
 ];
 
 export const ChatPage: React.FC = () => {
+  const { t } = useLanguageStore();
   const { activeStatus, setTokensPerSec } = useModelStore();
 
   const [chats, setChats] = useState<any[]>([]);
@@ -364,13 +366,13 @@ export const ChatPage: React.FC = () => {
               className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-subtle hover:bg-primary/90 transition-all"
             >
               <Plus className="w-4 h-4" />
-              <span>Yeni Sohbet</span>
+              <span>{t("chat.new_chat")}</span>
             </button>
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Sohbetlerde ara..."
+                placeholder={t("chat.search_chats")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-2.5 py-1.5 rounded-lg bg-card-muted/70 border border-border text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
@@ -382,7 +384,7 @@ export const ChatPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {filteredChats.length === 0 ? (
               <div className="p-4 text-center text-xs text-muted-foreground">
-                Kayıtlı sohbet bulunamadı.
+                {t("chat.no_chats")}
               </div>
             ) : (
               filteredChats.map((chat) => (
@@ -400,7 +402,7 @@ export const ChatPage: React.FC = () => {
                       activeChatId === chat.id ? "text-primary" : "text-muted-foreground"
                     }`}
                   />
-                  <span className="truncate flex-1">{chat.title || "Adsız Sohbet"}</span>
+                  <span className="truncate flex-1">{chat.title || t("chat.new_chat")}</span>
                 </button>
               ))
             )}
@@ -409,7 +411,7 @@ export const ChatPage: React.FC = () => {
           {/* Context Meter Footer */}
           <div className="p-3 border-t border-border bg-card-muted/40">
             <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5 font-mono">
-              <span>Bağlam Belleği</span>
+              <span>{t("chat.context_meter")}</span>
               <span className={contextPercent > 80 ? "text-warning" : "text-primary"}>
                 {totalTokens} / {contextCapacity} ({contextPercent}%)
               </span>
@@ -536,7 +538,7 @@ export const ChatPage: React.FC = () => {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Bir soru sorun veya komut verin... (Enter ile gönder, Shift+Enter yeni satır)"
+                placeholder={t("chat.composer_placeholder")}
                 rows={1}
                 disabled={isGenerating}
                 className="w-full bg-transparent resize-none outline-none text-xs md:text-sm text-foreground placeholder:text-muted-foreground p-1.5 max-h-[180px] font-sans"
@@ -565,7 +567,7 @@ export const ChatPage: React.FC = () => {
                     />
                   </label>
                   <span className="text-[11px] text-muted-foreground hidden sm:inline">
-                    Sistem: <strong className="text-foreground">{SYSTEM_PRESETS.find((p) => p.id === selectedPreset)?.name}</strong>
+                    {t("chat.system_prompt_label")}: <strong className="text-foreground">{SYSTEM_PRESETS.find((p) => p.id === selectedPreset)?.name}</strong>
                   </span>
                 </div>
 
@@ -576,7 +578,7 @@ export const ChatPage: React.FC = () => {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90 transition-colors shadow-subtle"
                     >
                       <Square className="w-3 h-3 fill-current" />
-                      <span>Durdur</span>
+                      <span>{t("chat.stop_button")}</span>
                     </button>
                   ) : (
                     <button
@@ -584,7 +586,7 @@ export const ChatPage: React.FC = () => {
                       disabled={!inputPrompt.trim() && attachments.length === 0}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-subtle"
                     >
-                      <span>Gönder</span>
+                      <span>{t("chat.send_button")}</span>
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -600,7 +602,7 @@ export const ChatPage: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                 <Sliders className="w-3.5 h-3.5 text-primary" />
-                <span>Çıkarım Ayarları</span>
+                <span>{t("chat.sampling_drawer_title")}</span>
               </h3>
               <button
                 onClick={() => setShowSettingsDrawer(false)}

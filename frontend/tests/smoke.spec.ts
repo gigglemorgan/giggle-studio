@@ -43,13 +43,35 @@ test.describe("Giggle Studio UI Smoke Tests", () => {
     await expect(html).toHaveClass(/dark/);
 
     // Click theme toggle button
-    const themeBtn = page.locator("button[aria-label='Koyu/Açık Tema Değiştir']");
+    const themeBtn = page.locator("header button").filter({ has: page.locator("svg.lucide-sun, svg.lucide-moon") }).first();
     await themeBtn.click();
     await expect(html).not.toHaveClass(/dark/);
 
     // Toggle back to dark
     await themeBtn.click();
     await expect(html).toHaveClass(/dark/);
+  });
+
+  test("can switch language between Turkish and English and update UI text", async ({ page }) => {
+    await page.goto("/");
+
+    // Verify initial Turkish text
+    await expect(page.getByRole("button", { name: "Sohbet", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Modeller", exact: true })).toBeVisible();
+
+    // Click language switcher button in navbar
+    const langBtn = page.locator("header button").filter({ hasText: /TR|EN/ }).first();
+    await langBtn.click();
+
+    // Verify UI dynamically updated to English
+    await expect(page.getByRole("button", { name: "Chat", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Models", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Code", exact: true })).toBeVisible();
+
+    // Toggle back to Turkish
+    await langBtn.click();
+    await expect(page.getByRole("button", { name: "Sohbet", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Modeller", exact: true })).toBeVisible();
   });
 
   test("navigates through main tabs cleanly", async ({ page }) => {

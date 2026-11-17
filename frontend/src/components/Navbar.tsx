@@ -11,10 +11,12 @@ import {
   Square,
   Sparkles,
   ArrowUpRight,
+  Languages,
 } from "lucide-react";
 import { SystemStatusResponse } from "../lib/api";
 import { useModelStore } from "../store/modelStore";
 import { useThemeStore } from "../store/themeStore";
+import { useLanguageStore } from "../i18n";
 import { toast } from "../store/toastStore";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/Tooltip";
 
@@ -33,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { activeStatus, tokensPerSec, unloadActiveModel } = useModelStore();
   const { isDark, toggleTheme } = useThemeStore();
+  const { language, toggleLanguage, t } = useLanguageStore();
 
   const gpu = statusData?.telemetry.gpu;
   const sys = statusData?.telemetry.system;
@@ -45,9 +48,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     e.stopPropagation();
     const ok = await unloadActiveModel();
     if (ok) {
-      toast.success("Model Kaldırıldı", "VRAM tamamen serbest bırakıldı.");
+      toast.success(t("navbar.unload_success_title"), t("navbar.unload_success_desc"));
     } else {
-      toast.error("Hata", "Model kaldırılırken bir hata oluştu.");
+      toast.error(t("navbar.unload_error_title"), t("navbar.unload_error_desc"));
     }
   };
 
@@ -62,10 +65,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenCommandPalette}
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border bg-card-muted/60 hover:bg-muted text-xs text-muted-foreground hover:text-foreground transition-all shadow-subtle group"
-            aria-label="Komut Paletini Aç (Ctrl+K)"
+            aria-label={t("navbar.search_tooltip")}
           >
             <Search className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <span className="hidden sm:inline">Hızlı Komut Ara...</span>
+            <span className="hidden sm:inline">{t("navbar.search_placeholder")}</span>
             <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-card border border-border text-[10px] font-mono text-muted-foreground">
               Ctrl+K
             </kbd>
@@ -93,13 +96,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     onClick={handleUnload}
                     className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                    aria-label="Modeli Kaldır"
+                    aria-label={t("navbar.unload_model_tooltip")}
                   >
                     <Square className="w-3 h-3 fill-current" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <span>Modeli Kaldır (VRAM'i Boşalt)</span>
+                  <span>{t("navbar.unload_model_tooltip")}</span>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -109,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-dashed border-border hover:border-primary/50 bg-card-muted/40 hover:bg-card-muted text-xs text-muted-foreground hover:text-foreground transition-all"
             >
               <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-              <span>Model Yükle</span>
+              <span>{t("models.btn_load")}</span>
               <ArrowUpRight className="w-3 h-3 text-muted-foreground" />
             </button>
           )}
@@ -178,12 +181,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 />
                 <span className="text-[11px] font-medium text-muted-foreground hidden md:inline">
-                  {activeStatus?.alive ? "Worker Aktif" : "Hazır"}
+                  {activeStatus?.alive ? t("navbar.worker_healthy") : t("common.inactive")}
                 </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <span>{activeStatus?.alive ? `Worker PID: ${activeStatus.pid} çalışıyor` : "Çıkarım workerı beklemede"}</span>
+              <span>{activeStatus?.alive ? `Worker PID: ${activeStatus.pid}` : t("navbar.worker_offline")}</span>
             </TooltipContent>
           </Tooltip>
 
@@ -196,11 +199,34 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <span>Bubblewrap Sandbox: Kernel seviyesi salt-okunur ve ağ izolasyonu aktif</span>
+              <span>{t("navbar.sandbox_tooltip")}</span>
             </TooltipContent>
           </Tooltip>
 
           <div className="h-4 w-px bg-border mx-1" />
+
+          {/* Language Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => {
+                  toggleLanguage();
+                  toast.info(
+                    language === "tr" ? "Language Changed" : "Dil Değiştirildi",
+                    language === "tr" ? "Switched to English interface." : "Türkçe arayüze geçildi."
+                  );
+                }}
+                className="px-2 py-1.5 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-semibold text-foreground transition-colors shadow-subtle flex items-center gap-1.5"
+                aria-label={t("navbar.language_toggle_tooltip")}
+              >
+                <Languages className="w-3.5 h-3.5 text-primary" />
+                <span className="font-mono text-[11px] tracking-wide">{language.toUpperCase()}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>{t("navbar.language_toggle_tooltip")}</span>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Theme Toggle */}
           <Tooltip>
@@ -208,13 +234,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-lg border border-border bg-card hover:bg-card-muted text-muted-foreground hover:text-foreground transition-colors shadow-subtle"
-                aria-label="Koyu/Açık Tema Değiştir"
+                aria-label={t("navbar.theme_toggle_tooltip")}
               >
                 {isDark ? <Sun className="w-4 h-4 text-primary" /> : <Moon className="w-4 h-4 text-foreground" />}
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>{isDark ? "Açık Temaya Geç (Ctrl+M)" : "Koyu Temaya Geç (Ctrl+M)"}</span>
+              <span>{t("navbar.theme_toggle_tooltip")}</span>
             </TooltipContent>
           </Tooltip>
 
@@ -224,13 +250,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenShortcuts}
                 className="p-2 rounded-lg border border-border bg-card hover:bg-card-muted text-muted-foreground hover:text-foreground transition-colors shadow-subtle"
-                aria-label="Klavye Kısayolları (?)"
+                aria-label={t("navbar.shortcuts_tooltip")}
               >
                 <HelpCircle className="w-4 h-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <span>Klavye Kısayolları (?)</span>
+              <span>{t("navbar.shortcuts_tooltip")}</span>
             </TooltipContent>
           </Tooltip>
         </div>

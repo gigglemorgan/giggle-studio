@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { GiggleLogo } from "./GiggleLogo";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/Tooltip";
+import { useLanguageStore } from "../i18n";
 
 export type NavTab =
   | "chat"
@@ -53,35 +54,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   onToggleCollapsed,
 }) => {
+  const { language, t } = useLanguageStore();
+
   const groups: NavGroup[] = [
     {
-      title: "Üretim",
+      title: t("nav.groups.production"),
       items: [
-        { id: "chat", label: "Sohbet", icon: MessageSquare },
-        { id: "code", label: "Kod", icon: Code2 },
-        { id: "agent", label: "Agent", icon: Bot },
+        { id: "chat", label: t("nav.chat"), icon: MessageSquare },
+        { id: "code", label: t("nav.code"), icon: Code2 },
+        { id: "agent", label: t("nav.agent"), icon: Bot },
       ],
     },
     {
-      title: "Yapay Zeka & Sistem",
+      title: t("nav.groups.ai_system"),
       items: [
-        { id: "models", label: "Modeller", icon: Layers },
-        { id: "training", label: "Eğitim", icon: GraduationCap },
-        { id: "re", label: "Tersine Müh.", icon: Binary },
+        { id: "models", label: t("nav.models"), icon: Layers },
+        { id: "training", label: t("nav.training"), icon: GraduationCap },
+        { id: "re", label: t("nav.re"), icon: Binary },
       ],
     },
     {
-      title: "Entegrasyon",
+      title: t("nav.groups.integration"),
       items: [
-        { id: "gmail", label: "Gmail", icon: Mail },
-        { id: "plugins", label: "Eklentiler & MCP", icon: Blocks },
+        { id: "gmail", label: t("nav.gmail"), icon: Mail },
+        { id: "plugins", label: t("nav.plugins"), icon: Blocks },
       ],
     },
     {
-      title: "Yönetim",
+      title: t("nav.groups.management"),
       items: [
-        { id: "resources", label: "Kaynaklar", icon: Activity },
-        { id: "settings", label: "Ayarlar & Doctor", icon: SettingsIcon },
+        { id: "resources", label: t("nav.resources"), icon: Activity },
+        { id: "settings", label: t("nav.settings"), icon: SettingsIcon },
       ],
     },
   ];
@@ -89,10 +92,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <TooltipProvider delayDuration={150}>
       <aside
+        data-lang={language}
         className={`relative flex flex-col border-r border-border bg-card/60 backdrop-blur-md transition-all duration-normal ease-smooth select-none shrink-0 ${
           collapsed ? "w-16" : "w-60"
         }`}
-        aria-label="Sol Kenar Çubuğu"
+        aria-label={t("shortcuts.toggle_sidebar")}
       >
         {/* Brand header */}
         <div className="flex items-center gap-3 px-4 h-14 border-b border-border/80">
@@ -105,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Giggle <span className="text-primary text-[11px] font-mono font-medium px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">Studio</span>
               </span>
               <span className="text-[10px] text-muted-foreground truncate mt-1">
-                Yerel LLM & Araştırma
+                {t("app.subtitle")}
               </span>
             </div>
           )}

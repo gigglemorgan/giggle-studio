@@ -17,13 +17,16 @@ import {
   ExternalLink,
   Sparkles,
   Github,
+  Languages,
 } from "lucide-react";
 import { DoctorResponse, fetchDoctorDiagnostics } from "../lib/api";
 import { GiggleLogo } from "../components/GiggleLogo";
 import { toast } from "../store/toastStore";
 import { Switch } from "../components/ui/Switch";
+import { useLanguageStore } from "../i18n";
 
 export const SettingsPage: React.FC = () => {
+  const { language, setLanguage, t } = useLanguageStore();
   const [activeTab, setActiveTab] = useState<"settings" | "doctor" | "about">("settings");
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -64,7 +67,7 @@ export const SettingsPage: React.FC = () => {
       const data = await fetchDoctorDiagnostics();
       setDoctorReport(data);
     } catch {
-      toast.error("Hata", "Teşhis çalıştırılamadı.");
+      toast.error(t("common.error"), t("doctor.status_warning"));
     } finally {
       setDoctorLoading(false);
     }
@@ -73,14 +76,14 @@ export const SettingsPage: React.FC = () => {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setSaved(true);
-    toast.success("Ayarlar Kaydedildi", "Yapılandırma başarıyla güncellendi.");
+    toast.success(t("common.saved"), t("settings.saved_toast"));
     setTimeout(() => setSaved(false), 3000);
   };
 
   const handleCopyFix = (fix: string, idx: number) => {
     navigator.clipboard.writeText(fix);
     setCopiedFixIndex(idx);
-    toast.info("Kopyalandı", "Çözüm komutu panoya kopyalandı.");
+    toast.info(t("common.copied"), t("doctor.fix"));
     setTimeout(() => setCopiedFixIndex(null), 2000);
   };
 
@@ -91,16 +94,16 @@ export const SettingsPage: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <SettingsIcon className="w-6 h-6 text-primary" />
-            <span>Ayarlar, Sistem Doktoru & Hakkında</span>
+            <span>{t("settings.title")}</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Giggle Studio sunucu yapılandırması, donanım teşhisi ve proje detayları.
+            {t("settings.subtitle")}
           </p>
         </div>
 
         {saved && (
           <div className="flex items-center gap-1.5 bg-success/15 border border-success/30 text-success px-3 py-1.5 rounded-lg text-xs font-semibold animate-fade-in">
-            <Check className="w-4 h-4" /> Ayarlar Kaydedildi
+            <Check className="w-4 h-4" /> {t("common.saved")}
           </div>
         )}
       </div>
@@ -116,7 +119,7 @@ export const SettingsPage: React.FC = () => {
           }`}
         >
           <SettingsIcon className="w-4 h-4" />
-          <span>Yapılandırma</span>
+          <span>{t("settings.tab_general")}</span>
         </button>
         <button
           onClick={() => setActiveTab("doctor")}
@@ -127,7 +130,7 @@ export const SettingsPage: React.FC = () => {
           }`}
         >
           <Stethoscope className="w-4 h-4" />
-          <span>Sistem Doktoru</span>
+          <span>{t("settings.tab_doctor")}</span>
         </button>
         <button
           onClick={() => setActiveTab("about")}
@@ -138,7 +141,7 @@ export const SettingsPage: React.FC = () => {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Hakkında (About)</span>
+          <span>{t("settings.tab_about")}</span>
         </button>
       </div>
 
@@ -150,7 +153,7 @@ export const SettingsPage: React.FC = () => {
             <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Ayarlarda ara (Örn: Port, VRAM, Token, OpenAI)..."
+              placeholder={t("common.search")}
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               className="w-full pl-9 pr-3 py-2 rounded-xl bg-card border border-border text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
@@ -158,25 +161,77 @@ export const SettingsPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
+            {/* Section 0: Language Preference */}
+            {(!searchFilter || "dil language l10n i18n türkçe english".includes(searchFilter.toLowerCase())) && (
+              <div className="p-5 rounded-2xl bg-card border border-border shadow-card space-y-4">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-primary" />
+                  <span>{t("settings.language_title")}</span>
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.language_desc")}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("tr");
+                      toast.info("Dil Değiştirildi", "Türkçe arayüze geçildi.");
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all ${
+                      language === "tr"
+                        ? "border-primary bg-primary/10 text-primary shadow-subtle ring-1 ring-primary/40"
+                        : "border-border bg-card-muted/40 text-muted-foreground hover:text-foreground hover:bg-card-muted"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">🇹🇷</span>
+                      <span>{t("settings.language_tr")}</span>
+                    </div>
+                    {language === "tr" && <Check className="w-4 h-4 text-primary" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage("en");
+                      toast.info("Language Changed", "Switched to English interface.");
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold transition-all ${
+                      language === "en"
+                        ? "border-primary bg-primary/10 text-primary shadow-subtle ring-1 ring-primary/40"
+                        : "border-border bg-card-muted/40 text-muted-foreground hover:text-foreground hover:bg-card-muted"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">🇬🇧</span>
+                      <span>{t("settings.language_en")}</span>
+                    </div>
+                    {language === "en" && <Check className="w-4 h-4 text-primary" />}
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Section 1: Server & Host */}
-            {(!searchFilter || "sunucu host port ağ".includes(searchFilter.toLowerCase())) && (
+            {(!searchFilter || "sunucu host port ağ network server".includes(searchFilter.toLowerCase())) && (
               <div className="p-5 rounded-2xl bg-card border border-border shadow-card space-y-4">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                   <Server className="w-4 h-4 text-primary" />
-                  <span>Sunucu & Ağ Parametreleri</span>
+                  <span>{t("settings.network_title")}</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Sunucu Adresi (Host)</label>
+                    <label className="text-xs text-muted-foreground">{t("settings.host_label")}</label>
                     <input
                       type="text"
                       value={host}
                       onChange={(e) => setHost(e.target.value)}
                       className="w-full p-2 rounded-lg bg-card-muted/60 border border-border text-xs text-foreground font-mono outline-none focus:border-primary"
                     />
+                    <p className="text-[10px] text-muted-foreground">{t("settings.host_help")}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Sunucu Portu</label>
+                    <label className="text-xs text-muted-foreground">{t("settings.port_label")}</label>
                     <input
                       type="number"
                       value={port}
@@ -189,50 +244,50 @@ export const SettingsPage: React.FC = () => {
             )}
 
             {/* Section 2: GPU & Safety Limits */}
-            {(!searchFilter || "gpu vram ram limit güvenlik".includes(searchFilter.toLowerCase())) && (
+            {(!searchFilter || "gpu vram ram limit güvenlik memory safety".includes(searchFilter.toLowerCase())) && (
               <div className="p-5 rounded-2xl bg-card border border-border shadow-card space-y-4">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-primary" />
-                  <span>GPU & Donanım Güvenlik Limitleri</span>
+                  <span>{t("settings.memory_title")}</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">VRAM Güvenlik Marjı (MB)</label>
+                    <label className="text-xs text-muted-foreground">{t("settings.vram_margin_label")}</label>
                     <input
                       type="number"
                       value={vramMargin}
                       onChange={(e) => setVramMargin(parseInt(e.target.value))}
                       className="w-full p-2 rounded-lg bg-card-muted/60 border border-border text-xs text-foreground font-mono outline-none focus:border-primary"
                     />
-                    <p className="text-[10px] text-muted-foreground">OOM çökmelerini önlemek için ayrılan tampon.</p>
+                    <p className="text-[10px] text-muted-foreground">{t("settings.vram_margin_help")}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Sistem RAM Tavanı (%)</label>
+                    <label className="text-xs text-muted-foreground">{t("settings.ram_ceiling_label")}</label>
                     <input
                       type="number"
                       value={ramCeiling}
                       onChange={(e) => setRamCeiling(parseInt(e.target.value))}
                       className="w-full p-2 rounded-lg bg-card-muted/60 border border-border text-xs text-foreground font-mono outline-none focus:border-primary"
                     />
-                    <p className="text-[10px] text-muted-foreground">Eğitim ve çıkarım sırasında RAM sınır yüzdesi.</p>
+                    <p className="text-[10px] text-muted-foreground">{t("settings.ram_ceiling_help")}</p>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Section 3: Integrations & API Keys */}
-            {(!searchFilter || "anahtar huggingface token openai gmail api".includes(searchFilter.toLowerCase())) && (
+            {(!searchFilter || "anahtar huggingface token openai gmail api keys".includes(searchFilter.toLowerCase())) && (
               <div className="p-5 rounded-2xl bg-card border border-border shadow-card space-y-4">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                   <Key className="w-4 h-4 text-primary" />
-                  <span>Entegrasyonlar & API Anahtarları</span>
+                  <span>{t("settings.api_keys_title")}</span>
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Hugging Face Erişim Belirteci (HF Token)</label>
+                    <label className="text-xs text-muted-foreground">{t("settings.hf_token_label")}</label>
                     <input
                       type="password"
-                      placeholder="hf_..."
+                      placeholder={t("settings.hf_token_placeholder")}
                       value={hfToken}
                       onChange={(e) => setHfToken(e.target.value)}
                       className="w-full p-2 rounded-lg bg-card-muted/60 border border-border text-xs text-foreground font-mono outline-none focus:border-primary"
@@ -241,8 +296,8 @@ export const SettingsPage: React.FC = () => {
 
                   <div className="flex items-center justify-between p-3 rounded-xl bg-card-muted/40 border border-border">
                     <div>
-                      <span className="text-xs font-semibold text-foreground">OpenAI Uyumlu API Uç Noktası</span>
-                      <p className="text-[10px] text-muted-foreground">/v1/chat/completions uç noktasını yerel olarak etkinleştirir.</p>
+                      <span className="text-xs font-semibold text-foreground">{t("settings.openai_compat_title")}</span>
+                      <p className="text-[10px] text-muted-foreground">{t("settings.openai_compat_desc")}</p>
                     </div>
                     <Switch checked={openaiCompat} onCheckedChange={setOpenaiCompat} />
                   </div>
@@ -255,7 +310,7 @@ export const SettingsPage: React.FC = () => {
               className="py-2.5 px-6 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:bg-primary/90 transition-all shadow-subtle flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              <span>Ayarları Kaydet</span>
+              <span>{t("settings.btn_save")}</span>
             </button>
           </form>
         </div>
@@ -268,7 +323,7 @@ export const SettingsPage: React.FC = () => {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="w-4 h-4 text-success" />
               <span>
-                Gizlilik Koruması: Çıktılar otomatik sansürlenir (redacted); kullanıcı adları ve sırlar gizlenir.
+                {t("navbar.sandbox_tooltip")}
               </span>
             </div>
             <button
@@ -277,7 +332,7 @@ export const SettingsPage: React.FC = () => {
               className="py-1.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-subtle flex items-center gap-1.5 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${doctorLoading ? "animate-spin" : ""}`} />
-              <span>Teşhisi Yeniden Çalıştır</span>
+              <span>{t("doctor.run_diagnostics")}</span>
             </button>
           </div>
 
@@ -297,8 +352,8 @@ export const SettingsPage: React.FC = () => {
                 )}
                 <span className="font-bold text-xs">
                   {doctorReport.status === "healthy"
-                    ? "Tüm Sistem Sağlık Kontrolleri Başarılı"
-                    : "Bazı Kontrollerde Uyarılar Bulunuyor"}
+                    ? t("doctor.status_healthy")
+                    : t("doctor.status_warning")}
                 </span>
               </div>
 
@@ -315,8 +370,8 @@ export const SettingsPage: React.FC = () => {
                         <span>{check.name}</span>
                       </div>
                       <div className="text-[11px] font-mono text-muted-foreground flex flex-wrap gap-x-4">
-                        <span>Hedef: <strong className="text-foreground">{check.target}</strong></span>
-                        <span>Ölçülen: <strong className="text-primary">{check.measured}</strong></span>
+                        <span>{t("doctor.target")}: <strong className="text-foreground">{check.target}</strong></span>
+                        <span>{t("doctor.measured")}: <strong className="text-primary">{check.measured}</strong></span>
                       </div>
                     </div>
 
@@ -324,7 +379,7 @@ export const SettingsPage: React.FC = () => {
                       <button
                         onClick={() => handleCopyFix(check.fix!, idx)}
                         className="py-1 px-3 rounded-lg bg-card-muted border border-border font-mono text-[11px] text-warning hover:bg-muted text-left transition-colors flex items-center justify-between gap-2"
-                        title="Çözüm komutunu kopyala"
+                        title={t("doctor.btn_copy_fix")}
                       >
                         <span className="truncate max-w-[260px]">{check.fix}</span>
                         {copiedFixIndex === idx ? (
@@ -349,44 +404,44 @@ export const SettingsPage: React.FC = () => {
             <GiggleLogo size={56} className="mx-auto" />
             <div>
               <h3 className="text-lg font-bold text-foreground flex items-center justify-center gap-2">
-                <span>Giggle Studio</span>
+                <span>{t("app.title")}</span>
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
-                  v0.1.0-alpha
+                  {t("app.version")}
                 </span>
               </h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-                Yerel donanımınızda çalışan, yüksek performanslı, gizlilik odaklı LLM çıkarımı, otonom agent ve tersine mühendislik stüdyosu.
+                {t("settings.about_tagline")}
               </p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left pt-2">
               <div className="p-3 rounded-xl bg-card-muted/60 border border-border">
-                <span className="text-[10px] text-muted-foreground block uppercase font-bold">Geliştirici</span>
-                <strong className="text-foreground font-mono">Sedat-gigglemorgan</strong>
+                <span className="text-[10px] text-muted-foreground block uppercase font-bold">{t("settings.about_author")}</span>
+                <strong className="text-foreground font-mono">{t("app.author")}</strong>
               </div>
               <div className="p-3 rounded-xl bg-card-muted/60 border border-border">
-                <span className="text-[10px] text-muted-foreground block uppercase font-bold">Lisans</span>
-                <strong className="text-foreground font-mono">MIT License</strong>
+                <span className="text-[10px] text-muted-foreground block uppercase font-bold">{t("settings.about_license")}</span>
+                <strong className="text-foreground font-mono">{t("app.license")}</strong>
               </div>
               <div className="p-3 rounded-xl bg-card-muted/60 border border-border">
-                <span className="text-[10px] text-muted-foreground block uppercase font-bold">Hızlandırıcı</span>
+                <span className="text-[10px] text-muted-foreground block uppercase font-bold">{t("resources.gpu_title")}</span>
                 <strong className="text-primary font-mono">RTX 5070 12GB</strong>
               </div>
               <div className="p-3 rounded-xl bg-card-muted/60 border border-border">
-                <span className="text-[10px] text-muted-foreground block uppercase font-bold">Kumhavuzu</span>
+                <span className="text-[10px] text-muted-foreground block uppercase font-bold">{t("navbar.sandbox_badge")}</span>
                 <strong className="text-success font-mono">Bubblewrap</strong>
               </div>
             </div>
 
             <div className="pt-4 border-t border-border flex items-center justify-center gap-4">
               <a
-                href="https://github.com/gigglemorgan/giggle-studio"
+                href={t("app.repository")}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 py-2 px-4 rounded-lg bg-card-muted hover:bg-muted border border-border text-xs font-semibold text-foreground transition-colors"
               >
                 <Github className="w-4 h-4 text-primary" />
-                <span>GitHub Deposu (gigglemorgan/giggle-studio)</span>
+                <span>{t("settings.about_repo")} (gigglemorgan/giggle-studio)</span>
                 <ExternalLink className="w-3 h-3 text-muted-foreground" />
               </a>
             </div>

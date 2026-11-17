@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from "./ui/Dialog";
 import { Keyboard } from "lucide-react";
+import { useLanguageStore } from "../i18n";
 
 interface KeyboardShortcutsModalProps {
   open: boolean;
@@ -17,6 +18,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { t } = useLanguageStore();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -32,13 +35,14 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   }, [onOpenChange]);
 
   const shortcuts = [
-    { key: "Ctrl / ⌘ + K", desc: "Komut Paletini Aç (Hızlı Arama & İşlemler)" },
-    { key: "?", desc: "Bu Kısayol Yardımını Göster" },
-    { key: "Ctrl + B", desc: "Sol Kenar Çubuğunu Daralt / Genişlet" },
-    { key: "Ctrl + M", desc: "Koyu / Açık Tema Değiştir" },
-    { key: "1 - 9", desc: "Ana Sayfalar Arasında Hızlı Geçiş Yap" },
-    { key: "Ctrl + Enter", desc: "Sohbet Mesajı Gönder veya Kod Çalıştır" },
-    { key: "Esc", desc: "Açık Pencereleri ve Modalleri Kapat" },
+    { key: "Ctrl / ⌘ + K", desc: t("shortcuts.command_palette") },
+    { key: "?", desc: t("shortcuts.help") },
+    { key: "Ctrl + B", desc: t("shortcuts.toggle_sidebar") },
+    { key: "Ctrl + M", desc: t("shortcuts.toggle_theme") },
+    { key: "1 - 9", desc: t("shortcuts.quick_tabs") },
+    { key: "Ctrl + Enter", desc: t("shortcuts.submit") },
+    { key: "Esc", desc: t("shortcuts.close_modals") },
+    { key: "A / D", desc: `${t("shortcuts.approve_agent")} / ${t("shortcuts.deny_agent")}` },
   ];
 
   return (
@@ -47,10 +51,10 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         <DialogHeader>
           <div className="flex items-center gap-2 text-primary mb-1">
             <Keyboard className="w-5 h-5" />
-            <DialogTitle>Klavye Kısayolları</DialogTitle>
+            <DialogTitle>{t("shortcuts.title")}</DialogTitle>
           </div>
           <DialogDescription>
-            Giggle Studio içinde klavye ile hızlı gezinme ve işlem kısayolları.
+            {t("shortcuts.subtitle")}
           </DialogDescription>
         </DialogHeader>
 

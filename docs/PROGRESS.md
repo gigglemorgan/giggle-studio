@@ -60,10 +60,11 @@
 - **Code Quality:**
   - Ruff: 0 lint errors, 100% formatted (90 backend files)
   - Mypy: Strict mode passing on all 67 backend source files
-  - Vite: Production frontend build successful with code-splitting (`dist/index.html`, index bundle: 61 kB, zero chunk warnings)
-  - Vitest: 10/10 frontend unit tests passing across 4 suites (`themeStore`, `toastStore`, `modelStore`, `uiComponents`)
-  - Playwright: 3/3 E2E smoke tests passing in headless Chromium (`smoke.spec.ts`)
+  - Vite: Production frontend build successful with code-splitting (`dist/index.html`, index bundle: 99 kB, zero chunk warnings)
+  - Vitest: 15/15 frontend unit tests passing across 5 suites (`themeStore`, `toastStore`, `modelStore`, `uiComponents`, `i18n`)
+  - Playwright: 4/4 E2E smoke tests passing in headless Chromium (`smoke.spec.ts`, including dynamic language switching)
   - Visual Verification: 20 full-page screenshots captured in `docs/screenshots/` (10 dark, 10 light)
+  - Internationalization: 100% parity English & Turkish localization dictionaries with reactive language switcher (`TR` / `EN`)
   - CLI: `giggle doctor`, `giggle setup`, `giggle run`, `giggle bench` operational
 
 ---
@@ -136,11 +137,12 @@ dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gz
  ✓ src/test/themeStore.test.ts (3)
  ✓ src/test/toastStore.test.ts (2)
  ✓ src/test/modelStore.test.ts (2)
+ ✓ src/test/i18n.test.ts (5)
  ✓ src/test/uiComponents.test.tsx (3)
 
- Test Files  4 passed (4)
-      Tests  10 passed (10)
-   Duration  1.27s
+ Test Files  5 passed (5)
+      Tests  15 passed (15)
+   Duration  1.86s
 
 ==========================================================
 ✅ All checks passed successfully!
