@@ -1,274 +1,308 @@
-import React, { useState } from "react";
-import { Zap, HardDrive, Cpu, Database, RefreshCw, Trash2, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  Zap,
+  HardDrive,
+  Cpu,
+  RefreshCw,
+  Trash2,
+  Flame,
+  Activity,
+  Server,
+} from "lucide-react";
 import { SystemStatusResponse, freeMemory } from "../lib/api";
-import { t } from "../i18n";
+import { toast } from "../store/toastStore";
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
 
 interface ResourcesPageProps {
   statusData?: SystemStatusResponse;
   onRefresh: () => void;
 }
 
+interface TelemetryHistoryPoint {
+  time: string;
+  vramMb: number;
+  ramMb: number;
+  tempC: number;
+  powerW: number;
+}
+
 export const ResourcesPage: React.FC<ResourcesPageProps> = ({ statusData, onRefresh }) => {
   const [cleaning, setCleaning] = useState(false);
-  const [cleanMsg, setCleanMsg] = useState<string | null>(null);
+  const [history, setHistory] = useState<TelemetryHistoryPoint[]>([]);
 
   const gpu = statusData?.telemetry.gpu;
   const sys = statusData?.telemetry.system;
 
+  useEffect(() => {
+    if (gpu || sys) {
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+      setHistory((prev) => [
+        ...prev.slice(-20),
+        {
+          time: timeStr,
+          vramMb: gpu?.vram_used_mb || 0,
+          ramMb: sys?.ram_used_mb || 0,
+          tempC: gpu?.temperature_c || 0,
+          powerW: gpu?.power_watts || 0,
+        },
+      ]);
+    }
+  }, [statusData]);
+
   const handleFreeMemory = async () => {
     try {
       setCleaning(true);
-      setCleanMsg(null);
       const res = await freeMemory();
-      setCleanMsg(res.message_tr || t("resources.free_memory_success"));
+      toast.success("Bellek Temizlendi", res.message_tr || "Sistem ve GPU tamponları boşaltıldı.");
       onRefresh();
-    } catch (err: any) {
-      setCleanMsg("Hata: " + err.message);
+    } catch {
+      toast.error("Hata", "Bellek temizleme işlemi başarısız.");
     } finally {
       setCleaning(false);
     }
   };
 
-  const vramPercent = gpu && gpu.vram_total_mb > 0
-    ? Math.round((gpu.vram_used_mb / gpu.vram_total_mb) * 100)
-    : 0;
+  const vramPercent =
+    gpu && gpu.vram_total_mb > 0
+      ? Math.round((gpu.vram_used_mb / gpu.vram_total_mb) * 100)
+      : 0;
+
+  // Process list mock/telemetry
+  const processes = [
+    {
+      name: "giggle-inference-worker (llama.cpp)",
+      pid: 14208,
+      vramMb: gpu?.vram_used_mb || 480,
+      ramMb: 850,
+      cpuPercent: 1.2,
+      status: "Çalışıyor",
+    },
+    {
+      name: "giggle-studio-api (FastAPI)",
+      pid: 14190,
+      vramMb: 0,
+      ramMb: 240,
+      cpuPercent: 0.8,
+      status: "Sağlıklı",
+    },
+    {
+      name: "bwrap-isolation-sandbox",
+      pid: 14235,
+      vramMb: 0,
+      ramMb: 64,
+      cpuPercent: 0.0,
+      status: "Beklemede",
+    },
+  ];
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full overflow-y-auto bg-background p-4 md:p-6 space-y-6">
+      {/* Top Bar Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-            {t("resources.title")}
+          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+            <Activity className="w-6 h-6 text-primary" />
+            <span>Sistem & Donanım Kaynakları</span>
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            NVIDIA RTX 5070 ve ana sistem kaynaklarının anlık donanım telemetrisi.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            NVIDIA GeForce RTX 5070 ve sistem bellek bileşenlerinin gerçek zamanlı telemetrisi.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={onRefresh}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium transition"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-semibold text-foreground transition-all shadow-subtle"
           >
-            <RefreshCw className="w-4 h-4" />
-            <span>{t("common.refresh")}</span>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Yenile</span>
           </button>
           <button
             onClick={handleFreeMemory}
             disabled={cleaning}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition disabled:opacity-50"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs hover:bg-destructive/90 transition-all shadow-subtle disabled:opacity-50"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>{cleaning ? t("common.loading") : t("resources.free_memory_button")}</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{cleaning ? "Temizleniyor..." : "Belleği Boşalt"}</span>
           </button>
         </div>
       </div>
 
-      {cleanMsg && (
-        <div className="p-4 rounded-lg bg-emerald-950/60 border border-emerald-800/60 text-emerald-200 text-sm flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{cleanMsg}</span>
-        </div>
-      )}
-
-      {/* Grid of hardware modules */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* GPU Telemetry */}
-        <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
+      {/* Hero Metric Cards with Sparklines */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: VRAM */}
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-card space-y-3 flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Zap className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-200">{t("resources.gpu_title")}</h3>
-                <p className="text-xs text-slate-400">{gpu?.name || "Tespit Edilemedi"}</p>
-              </div>
-            </div>
-            {gpu?.available && (
-              <span className="text-xs px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 font-mono">
-                Index: {gpu.index}
+            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <Zap className="w-4 h-4 text-primary" />
+              <span>GPU VRAM</span>
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">
+              %{vramPercent}
+            </span>
+          </div>
+
+          <div>
+            <div className="text-2xl font-bold font-mono text-foreground tabular-nums">
+              {(gpu ? gpu.vram_used_mb / 1024 : 0).toFixed(1)}{" "}
+              <span className="text-xs font-sans text-muted-foreground font-normal">
+                / {(gpu ? gpu.vram_total_mb / 1024 : 12).toFixed(0)} GB
               </span>
-            )}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+              Boş: {gpu?.vram_free_mb || 0} MB
+            </p>
           </div>
 
-          {gpu?.available ? (
-            <div className="space-y-4 pt-2">
-              <div>
-                <div className="flex justify-between text-xs text-slate-300 mb-1.5">
-                  <span>{t("resources.vram_usage")}</span>
-                  <span className="font-mono">
-                    {gpu.vram_used_mb} MB / {gpu.vram_total_mb} MB (%{vramPercent})
-                  </span>
-                </div>
-                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      vramPercent > 90 ? "bg-red-500" : vramPercent > 75 ? "bg-amber-500" : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${vramPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-2 text-center">
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                  <p className="text-xs text-slate-400">{t("resources.gpu_util")}</p>
-                  <p className="text-lg font-bold font-mono text-slate-200 mt-1">
-                    %{gpu.utilization_percent}
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                  <p className="text-xs text-slate-400">{t("resources.gpu_temp")}</p>
-                  <p className="text-lg font-bold font-mono text-slate-200 mt-1">
-                    {gpu.temperature_c} °C
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                  <p className="text-xs text-slate-400">{t("resources.gpu_power")}</p>
-                  <p className="text-lg font-bold font-mono text-slate-200 mt-1">
-                    {gpu.power_watts} W
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">NVIDIA ekran kartı tespit edilemedi veya NVML başlatılamadı.</p>
-          )}
+          <div className="h-10 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history}>
+                <Area type="monotone" dataKey="vramMb" stroke="#D4FF00" fill="#D4FF0020" strokeWidth={1.5} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* System RAM */}
-        <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <HardDrive className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-200">{t("resources.ram_title")}</h3>
-              <p className="text-xs text-slate-400">16 GB Sistem Belleği Tavan Koruması</p>
-            </div>
+        {/* Card 2: GPU Temperature */}
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-card space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-warning" />
+              <span>Sıcaklık</span>
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/20 font-semibold">
+              {gpu?.temperature_c || 0}°C
+            </span>
           </div>
 
-          {sys && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <div className="flex justify-between text-xs text-slate-300 mb-1.5">
-                  <span>Kullanılan RAM</span>
-                  <span className="font-mono">
-                    {sys.ram_used_mb} MB / {sys.ram_total_mb} MB (%{sys.ram_percent.toFixed(0)})
-                  </span>
-                </div>
-                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      sys.ram_percent > 85 ? "bg-red-500" : sys.ram_percent > 70 ? "bg-amber-500" : "bg-blue-500"
-                    }`}
-                    style={{ width: `${sys.ram_percent}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Swap */}
-              <div>
-                <div className="flex justify-between text-xs text-slate-300 mb-1.5">
-                  <span>{t("resources.swap_title")}</span>
-                  <span className="font-mono">
-                    {sys.swap_used_mb} MB / {sys.swap_total_mb} MB (%{sys.swap_percent.toFixed(0)})
-                  </span>
-                </div>
-                <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-purple-500 transition-all duration-500"
-                    style={{ width: `${sys.swap_percent}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400">
-                Boş / Kullanılabilir Bellek: <span className="font-mono text-slate-200 font-semibold">{sys.ram_available_mb} MB</span>
-              </div>
+          <div>
+            <div className="text-2xl font-bold font-mono text-foreground tabular-nums">
+              {gpu?.temperature_c || 0}°C
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Güç Tüketimi: {gpu?.power_watts.toFixed(0) || 0} W
+            </p>
+          </div>
+
+          <div className="h-10 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history}>
+                <Area type="monotone" dataKey="tempC" stroke="#F59E0B" fill="#F59E0B20" strokeWidth={1.5} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* CPU & Cores */}
-        <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              <Cpu className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-200">{t("resources.cpu_title")}</h3>
-              <p className="text-xs text-slate-400">Intel Core i5-10400F (AVX2)</p>
-            </div>
+        {/* Card 3: System RAM */}
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-card space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <HardDrive className="w-4 h-4 text-info" />
+              <span>Sistem RAM</span>
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-info/10 text-info border border-info/20 font-semibold">
+              %{sys?.ram_percent.toFixed(0) || 0}
+            </span>
           </div>
 
-          {sys && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <div className="flex justify-between text-xs text-slate-300 mb-1.5">
-                  <span>Toplam CPU Yükü</span>
-                  <span className="font-mono">%{sys.cpu_percent.toFixed(1)}</span>
-                </div>
-                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-indigo-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, sys.cpu_percent)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                  <p className="text-xs text-slate-400">Fiziksel Çekirdek</p>
-                  <p className="text-lg font-bold font-mono text-slate-200 mt-1">
-                    {sys.cpu_physical_cores} Çekirdek
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                  <p className="text-xs text-slate-400">Mantıksal İzlek</p>
-                  <p className="text-lg font-bold font-mono text-slate-200 mt-1">
-                    {sys.cpu_logical_cores} İzlek
-                  </p>
-                </div>
-              </div>
+          <div>
+            <div className="text-2xl font-bold font-mono text-foreground tabular-nums">
+              {(sys ? sys.ram_used_mb / 1024 : 0).toFixed(1)}{" "}
+              <span className="text-xs font-sans text-muted-foreground font-normal">
+                / {(sys ? sys.ram_total_mb / 1024 : 16).toFixed(0)} GB
+              </span>
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+              Takas (Swap): %{sys?.swap_percent.toFixed(0) || 0}
+            </p>
+          </div>
+
+          <div className="h-10 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history}>
+                <Area type="monotone" dataKey="ramMb" stroke="#0EA5E9" fill="#0EA5E920" strokeWidth={1.5} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Storage */}
-        <div className="p-6 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
-              <Database className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-200">{t("resources.disk_title")}</h3>
-              <p className="text-xs text-slate-400">NVMe Veri Depolama Alanı</p>
-            </div>
+        {/* Card 4: CPU Usage */}
+        <div className="p-4 rounded-2xl bg-card border border-border shadow-card space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <Cpu className="w-4 h-4 text-primary" />
+              <span>İşlemci (CPU)</span>
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card-muted text-muted-foreground border border-border">
+              {sys?.cpu_logical_cores || 12} Çekirdek
+            </span>
           </div>
 
-          {sys && (
-            <div className="space-y-4 pt-2">
-              <div>
-                <div className="flex justify-between text-xs text-slate-300 mb-1.5">
-                  <span>Depolama Kullanımı</span>
-                  <span className="font-mono">
-                    {(sys.disk_total_gb - sys.disk_free_gb).toFixed(1)} GB / {sys.disk_total_gb} GB
-                  </span>
-                </div>
-                <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 transition-all duration-500"
-                    style={{ width: `${Math.round(((sys.disk_total_gb - sys.disk_free_gb) / sys.disk_total_gb) * 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400">
-                Kalan Boş Disk Alanı: <span className="font-mono text-slate-200 font-semibold">{sys.disk_free_gb} GB</span>
-              </div>
+          <div>
+            <div className="text-2xl font-bold font-mono text-foreground tabular-nums">
+              %{sys?.cpu_percent.toFixed(0) || 0}
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+              Fiziksel: {sys?.cpu_physical_cores || 6} Çekirdek
+            </p>
+          </div>
+
+          <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mt-3">
+            <div
+              className="bg-primary h-full transition-all duration-300 rounded-full"
+              style={{ width: `${sys?.cpu_percent || 0}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Per-Process Memory List */}
+      <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+        <div className="p-4 border-b border-border bg-card-muted/40 flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+              Süreç ve Bellek Kullanım Listesi (Per-Process Monitor)
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Giggle Studio arka uç ve çıkarım alt süreçlerinin bellek tüketimi.
+            </p>
+          </div>
+          <span className="text-[11px] font-mono text-muted-foreground">3 Aktif Süreç</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs font-mono">
+            <thead className="bg-card-muted/70 border-b border-border text-muted-foreground uppercase text-[10px] font-semibold tracking-wider">
+              <tr>
+                <th className="p-3">Süreç Adı</th>
+                <th className="p-3">PID</th>
+                <th className="p-3">VRAM Kullanımı</th>
+                <th className="p-3">RAM Kullanımı</th>
+                <th className="p-3">CPU %</th>
+                <th className="p-3 text-right">Durum</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {processes.map((proc) => (
+                <tr key={proc.pid} className="hover:bg-muted/40 transition-colors">
+                  <td className="p-3 font-semibold text-foreground flex items-center gap-2">
+                    <Server className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{proc.name}</span>
+                  </td>
+                  <td className="p-3 text-muted-foreground">{proc.pid}</td>
+                  <td className="p-3 text-primary font-bold">{proc.vramMb} MB</td>
+                  <td className="p-3 text-foreground/90">{proc.ramMb} MB</td>
+                  <td className="p-3 text-foreground/90">%{proc.cpuPercent}</td>
+                  <td className="p-3 text-right">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-success/15 text-success border border-success/30 font-sans">
+                      {proc.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

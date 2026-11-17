@@ -110,6 +110,22 @@ Giggle Studio isolates memory-heavy machine learning runtimes from the core web 
 
 ---
 
+## Visual Interface & Design Tour
+
+Giggle Studio features a bespoke, Linear/Raycast-grade dark graphite UI with electric lime accents, fully self-hosted typography (Inter & JetBrains Mono), responsive panel layouts, and complete dark/light theme support.
+
+| View (Dark Theme) | View (Light Theme) |
+| :--- | :--- |
+| **Chat & Reasoning Stream**<br><img src="docs/screenshots/chat-dark.png" width="480" alt="Chat Dark" /> | **Chat (Light)**<br><img src="docs/screenshots/chat-light.png" width="480" alt="Chat Light" /> |
+| **Model Manager & Offload Planner**<br><img src="docs/screenshots/models-dark.png" width="480" alt="Models Dark" /> | **Model Manager (Light)**<br><img src="docs/screenshots/models-light.png" width="480" alt="Models Light" /> |
+| **Code Studio & Monaco IDE**<br><img src="docs/screenshots/code-dark.png" width="480" alt="Code Dark" /> | **Code Studio (Light)**<br><img src="docs/screenshots/code-light.png" width="480" alt="Code Light" /> |
+| **Autonomous Agent & Approvals**<br><img src="docs/screenshots/agent-dark.png" width="480" alt="Agent Dark" /> | **Autonomous Agent (Light)**<br><img src="docs/screenshots/agent-light.png" width="480" alt="Agent Light" /> |
+| **Training Studio & Preflight**<br><img src="docs/screenshots/training-dark.png" width="480" alt="Training Dark" /> | **Training Studio (Light)**<br><img src="docs/screenshots/training-light.png" width="480" alt="Training Light" /> |
+| **Reverse Engineering Workbench**<br><img src="docs/screenshots/re-dark.png" width="480" alt="RE Dark" /> | **Reverse Engineering (Light)**<br><img src="docs/screenshots/re-light.png" width="480" alt="RE Light" /> |
+| **Hardware & VRAM Telemetry**<br><img src="docs/screenshots/resources-dark.png" width="480" alt="Resources Dark" /> | **Hardware Telemetry (Light)**<br><img src="docs/screenshots/resources-light.png" width="480" alt="Resources Light" /> |
+
+---
+
 ## Limitations & Alpha Notice
 
 - This is a pre-alpha preview (`v0.1.0`). APIs and database schemas may evolve.

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" fill="none">
+  <rect width="40" height="40" rx="10" fill="#0B0E15"/>
+  <rect x="0.5" y="0.5" width="39" height="39" rx="9.5" stroke="#212A3D"/>
+  <!-- Giggle eyes -->
+  <circle cx="13" cy="15" r="2.8" fill="#D4FF00"/>
+  <circle cx="27" cy="15" r="2.8" fill="#D4FF00"/>
+  <!-- Giggle smile curve -->
+  <path d="M12 23C13.5 28 26.5 28 28 23" stroke="#D4FF00" stroke-width="3" stroke-linecap="round"/>
+</svg>

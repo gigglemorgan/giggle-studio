@@ -82,6 +82,22 @@ Tarayıcınızda `http://127.0.0.1:8420` adresine gidin.
 
 ---
 
+## Görsel Arayüz Galerisi
+
+Giggle Studio; Linear ve Raycast kalitesinde koyu grafit teması, elektrik lime vurgu rengi, tamamen yerel barındırılan tipografi (Inter & JetBrains Mono), duyarlı panel yerleşimleri ve eksiksiz açık/koyu tema desteği ile tasarlanmıştır.
+
+| Görünüm (Koyu Tema) | Görünüm (Açık Tema) |
+| :--- | :--- |
+| **Sohbet & Düşünce Akışı**<br><img src="docs/screenshots/chat-dark.png" width="480" alt="Sohbet Koyu" /> | **Sohbet (Açık)**<br><img src="docs/screenshots/chat-light.png" width="480" alt="Sohbet Açık" /> |
+| **Model Yöneticisi & Yerleşim/Offload Planlayıcı**<br><img src="docs/screenshots/models-dark.png" width="480" alt="Modeller Koyu" /> | **Model Yöneticisi (Açık)**<br><img src="docs/screenshots/models-light.png" width="480" alt="Modeller Açık" /> |
+| **Kod Stüdyosu & Monaco IDE**<br><img src="docs/screenshots/code-dark.png" width="480" alt="Kod Koyu" /> | **Kod Stüdyosu (Açık)**<br><img src="docs/screenshots/code-light.png" width="480" alt="Kod Açık" /> |
+| **Otonom Agent & Onay Mekanizması**<br><img src="docs/screenshots/agent-dark.png" width="480" alt="Agent Koyu" /> | **Otonom Agent (Açık)**<br><img src="docs/screenshots/agent-light.png" width="480" alt="Agent Açık" /> |
+| **Model Eğitim Stüdyosu & Preflight**<br><img src="docs/screenshots/training-dark.png" width="480" alt="Eğitim Koyu" /> | **Model Eğitim Stüdyosu (Açık)**<br><img src="docs/screenshots/training-light.png" width="480" alt="Eğitim Açık" /> |
+| **Tersine Mühendislik Tezgahı**<br><img src="docs/screenshots/re-dark.png" width="480" alt="Tersine Mühendislik Koyu" /> | **Tersine Mühendislik (Açık)**<br><img src="docs/screenshots/re-light.png" width="480" alt="Tersine Mühendislik Açık" /> |
+| **Donanım & VRAM Telemetrisi**<br><img src="docs/screenshots/resources-dark.png" width="480" alt="Kaynaklar Koyu" /> | **Donanım Telemetrisi (Açık)**<br><img src="docs/screenshots/resources-light.png" width="480" alt="Kaynaklar Açık" /> |
+
+---
+
 ## Lisans
 
 Giggle Studio, [Apache-2.0 Lisansı](LICENSE) altında dağıtılmaktadır.

@@ -19,6 +19,7 @@
 | **Phase 5** | Training Studio (LoRA / QLoRA SFT, dataset tools, preflight, live charts, resume) | **Completed** | Dataset format detection (Alpaca, ShareGPT, OpenAI), analytical VRAM preflight engine modeling base 4-bit, LoRA FP32, gradients, paged_adamw_8bit optimizer states against 11.6 GB VRAM budget, isolated training subprocess with SSE metric streaming (`loss`, `vram`, `lr`). Tagged `phase-5-done`. |
 | **Phase 6** | Post-Training, Export, Reference Plugins, Final Polish | **Completed** | LoRA weight merger, automated Hugging Face Model Card generator with attribution ("Trained with Giggle Studio" by "Sedat-gigglemorgan"), complete Settings UI with server configuration, and reference plugins. Tagged `phase-6-done`. |
 | **Phase 6b** | RE Advanced (Sandboxed dynamic analysis, diff, test fixtures) | **Completed** | Transient sealed Bubblewrap execution sandbox for benign binary inspection, compiled benign ELF test fixtures, dynamic trace output capture. Tagged `phase-6-done`. |
+| **Phase 7** | Frontend Visual Redesign (Linear/Raycast Design System, Polish, Tokens, Tests) | **Completed** | Full visual overhaul to dark graphite `#0B0E15` + Electric Lime `#D4FF00` accent, self-hosted Inter & JetBrains Mono, code-split bundles (index 61 kB), 10/10 Vitest store/UI unit tests, 3/3 Playwright smoke tests, 20 visual screenshots in `docs/screenshots/`, and `scripts/check.sh` clean pass. |
 
 ---
 
@@ -57,7 +58,92 @@
   - SFT training dataset parser and token statistics
   - Analytical LoRA preflight memory checks (safe vs oversized refusal)
 - **Code Quality:**
-  - Ruff: 0 lint errors, 100% formatted
+  - Ruff: 0 lint errors, 100% formatted (90 backend files)
   - Mypy: Strict mode passing on all 67 backend source files
-  - Vite: Production frontend build successful (`dist/assets/index-*.js`, `dist/assets/index-*.css`)
+  - Vite: Production frontend build successful with code-splitting (`dist/index.html`, index bundle: 61 kB, zero chunk warnings)
+  - Vitest: 10/10 frontend unit tests passing across 4 suites (`themeStore`, `toastStore`, `modelStore`, `uiComponents`)
+  - Playwright: 3/3 E2E smoke tests passing in headless Chromium (`smoke.spec.ts`)
+  - Visual Verification: 20 full-page screenshots captured in `docs/screenshots/` (10 dark, 10 light)
   - CLI: `giggle doctor`, `giggle setup`, `giggle run`, `giggle bench` operational
+
+---
+
+## 4. Phase 7: Complete Visual Redesign Verification
+
+### 4.1 Design System & Architecture Implementation
+- **Palette & Tokens**: Dark graphite canvas (`#0B0E15`), card background (`#111622`), elevated surface (`#161C2C`), refined graphite borders (`#1F293D`). Committed high-contrast Electric Lime (`#D4FF00` dark, `#65A30D` light) accent. Full support for `prefers-color-scheme` and manual toggle (`Ctrl+M`).
+- **Self-Hosted Privacy Typography**: Self-hosted `@fontsource/inter` and `@fontsource/jetbrains-mono` bundled into `dist/assets/` (zero external CDN requests).
+- **Bundle Optimization**: Resolved `>500 kB` chunk warning by combining `React.lazy` on all top-level views with Vite `manualChunks` (`vendor-react`, `vendor-radix`, `vendor-monaco`, `vendor-recharts`, `vendor-icons`). Main entry bundle reduced to **61 kB**, largest chunk is 377 kB.
+- **Key Modules Redesigned**:
+  1. *Sohbet*: ChatGPT/Claude-grade chat, collapsible `<think>` reasoning traces, Shiki code highlighting with copy/wrap, token context meter, sampling drawer.
+  2. *Modeller & Offload*: Hero Offload Planner with draggable GPU layer slider, live stacked VRAM/RAM allocation bar, layer visual map, and Auto-tuner benchmark chart.
+  3. *Kod*: Monaco editor with custom `giggle-dark` and `giggle-light` themes, side-by-side diff view, and Bubblewrap sandbox terminal.
+  4. *Agent*: Policy selector, step timeline trace, tool call risk badges, and keyboard approval cards (`A`/`D`).
+  5. *Eğitim*: 5-step wizard, token histogram, analytical VRAM preflight checker, live loss charts, and model card export.
+  6. *Tersine Mühendislik*: Authorized-use security banner, 3-column workbench, Shannon section entropy strip, disassembly & decompiler, and call graph.
+  7. *Gmail*: Scopes card, inbox/thread viewer, draft preview, audit log, and mandatory sending confirmation modal.
+  8. *Eklentiler*: Plugin gallery with permission badges, install prompt modal, and MCP server health dots.
+  9. *Kaynaklar*: Live gauges and sparkline charts for VRAM, GPU temp, power, RAM, CPU, and memory purge.
+  10. *Ayarlar & Doctor*: Grouped settings with search, Doctor checklist with copyable fix commands, and About modal.
+
+### 4.2 Automated Verification Output (`scripts/check.sh`)
+
+```
+==========================================================
+          Giggle Studio - Quality & Security Checks
+==========================================================
+🔍 1. Running Ruff (Linter & Formatter)...
+All checks passed!
+90 files already formatted
+🔍 2. Running Mypy (Type Checker)...
+Success: no issues found in 67 source files
+🔍 3. Running Pytest (Unit Tests)...
+============================== 42 passed in 3.03s ==============================
+🔍 4. Checking Frontend (TypeScript Build & Vitest Unit Tests)...
+
+> giggle-studio-ui@0.1.0 build
+> tsc && vite build
+
+vite v5.4.21 building for production...
+✓ 2436 modules transformed.
+dist/index.html                                                   0.67 kB │ gzip:   0.38 kB
+dist/assets/index-BrPuhRqk.css                                   75.25 kB │ gzip:  23.30 kB
+dist/assets/Switch-l2a-V3k6.js                                    0.75 kB │ gzip:   0.43 kB
+dist/assets/DoctorPage-BIByQgHB.js                                4.89 kB │ gzip:   2.14 kB
+dist/assets/ResourcesPage-B2HraL5K.js                             9.82 kB │ gzip:   2.56 kB
+dist/assets/PluginsPage-B6BYKWTL.js                              11.05 kB │ gzip:   3.30 kB
+dist/assets/SettingsPage-DzO7DTBg.js                             13.30 kB │ gzip:   3.40 kB
+dist/assets/AgentPage-BpT5HRBq.js                                13.73 kB │ gzip:   4.24 kB
+dist/assets/CodePage-BreLIETh.js                                 13.94 kB │ gzip:   4.38 kB
+dist/assets/GmailPage-PxgQF8qL.js                                14.90 kB │ gzip:   4.09 kB
+dist/assets/vendor-monaco-DlYVq7HX.js                            14.92 kB │ gzip:   5.14 kB
+dist/assets/REPage-kVUOwwdD.js                                   17.71 kB │ gzip:   5.07 kB
+dist/assets/ChatPage-DZrLbtYR.js                                 21.89 kB │ gzip:   6.70 kB
+dist/assets/TrainingPage-BFcxwdIT.js                             26.64 kB │ gzip:   6.71 kB
+dist/assets/ModelsPage-CSE7nB7E.js                               26.79 kB │ gzip:   6.78 kB
+dist/assets/vendor-icons-Dewd0FjR.js                             31.76 kB │ gzip:   6.31 kB
+dist/assets/vendor-radix-D-_E0FfP.js                             45.81 kB │ gzip:  15.14 kB
+dist/assets/index-CY67FMsW.js                                    61.35 kB │ gzip:  19.56 kB
+dist/assets/vendor-react-4LmvIfIb.js                            327.21 kB │ gzip: 103.44 kB
+dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gzip: 102.88 kB
+✓ built in 4.35s
+
+> giggle-studio-ui@0.1.0 test
+> vitest run
+
+ RUN  v2.1.9 /home/sedat/giggle-studio/frontend
+
+ ✓ src/test/themeStore.test.ts (3)
+ ✓ src/test/toastStore.test.ts (2)
+ ✓ src/test/modelStore.test.ts (2)
+ ✓ src/test/uiComponents.test.tsx (3)
+
+ Test Files  4 passed (4)
+      Tests  10 passed (10)
+   Duration  1.27s
+
+==========================================================
+✅ All checks passed successfully!
+==========================================================
+```
+

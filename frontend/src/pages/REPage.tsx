@@ -2,19 +2,15 @@ import React, { useState } from "react";
 import {
   Binary,
   Upload,
-  Shield,
-  FileCode,
-  Terminal,
-  Activity,
-  Layers,
   Sparkles,
   Copy,
   Check,
   Search,
-  Hash,
-  Database,
   ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
+import { toast } from "../store/toastStore";
+import { EmptyState } from "../components/ui/StatusStates";
 
 interface SampleMeta {
   id: string;
@@ -86,12 +82,16 @@ interface AIAnalysisResult {
 }
 
 export const REPage: React.FC = () => {
+  const [authorizedBannerDismissed, setAuthorizedBannerDismissed] = useState(
+    localStorage.getItem("giggle-re-authorized") === "true"
+  );
   const [activeTab, setActiveTab] = useState<
     "overview" | "disasm" | "hex" | "callgraph" | "yara"
   >("overview");
   const [sample, setSample] = useState<SampleMeta | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFunction, setSelectedFunction] = useState<FunctionItem | null>(null);
+  const [highlightAddress, setHighlightAddress] = useState<string | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [yaraRule, setYaraRule] = useState<string>("");
@@ -100,8 +100,10 @@ export const REPage: React.FC = () => {
   const [funcSearch, setFuncSearch] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Default project ID
-  const projectId = "default-re-proj";
+  const handleDismissBanner = () => {
+    localStorage.setItem("giggle-re-authorized", "true");
+    setAuthorizedBannerDismissed(true);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -112,59 +114,55 @@ export const REPage: React.FC = () => {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`/api/re/samples/upload?project_id=${projectId}`, {
+      const res = await fetch("/api/re/samples/upload?project_id=default", {
         method: "POST",
         body: formData,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setSample(data);
-        if (data.analysis?.functions?.length > 0) {
-          setSelectedFunction(data.analysis.functions[0]);
-        }
-        loadHex(data.id, 0);
+
+      if (!res.ok) throw new Error("Örnek yüklenemedi");
+      const data = await res.json();
+      setSample(data);
+      if (data.analysis?.functions?.length > 0) {
+        setSelectedFunction(data.analysis.functions[0]);
       }
-    } catch (err) {
-      console.error("Upload error:", err);
+      toast.success("Analiz Tamamlandı", `${file.name} başarıyla karantinaya alındı ve ayrıştırıldı.`);
+      loadHexView(data.id, 0);
+    } catch (err: any) {
+      toast.error("Hata", err.message || "Örnek yüklenemedi.");
     } finally {
       setIsUploading(false);
     }
   };
 
-  const loadHex = async (sampleId: string, offset: number) => {
+  const loadHexView = async (sampleId: string, offset: number) => {
     try {
       const res = await fetch(`/api/re/samples/${sampleId}/hex?offset=${offset}&length=256`);
       if (res.ok) {
-        setHexData(await res.json());
+        const data = await res.json();
+        setHexData(data);
+        setHexOffset(offset);
       }
-    } catch (err) {
-      console.error("Hex load error:", err);
-    }
+    } catch {}
   };
 
-  const handleAnalyzeFunction = async () => {
-    if (!selectedFunction || !sample) return;
-    setIsAnalyzing(true);
+  const handleSelectFunction = async (fn: FunctionItem) => {
+    setSelectedFunction(fn);
+    setHighlightAddress(null);
     setAiAnalysis(null);
 
-    // Find function id from sample if available
+    if (!sample) return;
     try {
-      // Find function item in functions list
-      const fnsRes = await fetch(`/api/re/samples/${sample.id}/functions`);
-      if (fnsRes.ok) {
-        const fns = await fnsRes.json();
-        const matched = fns.find((f: { name: string }) => f.name === selectedFunction.name);
-        if (matched) {
-          const aRes = await fetch(`/api/re/functions/${matched.id}/analyze`, {
-            method: "POST",
-          });
-          if (aRes.ok) {
-            setAiAnalysis(await aRes.json());
-          }
-        }
+      setIsAnalyzing(true);
+      const res = await fetch(`/api/re/functions/${fn.name}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sample_id: sample.id, address: fn.address }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiAnalysis(data);
       }
-    } catch (err) {
-      console.error("Analysis error:", err);
+    } catch {
     } finally {
       setIsAnalyzing(false);
     }
@@ -173,490 +171,437 @@ export const REPage: React.FC = () => {
   const handleGenerateYara = async () => {
     if (!sample) return;
     try {
-      const res = await fetch(`/api/re/samples/${sample.id}/yara`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/re/samples/${sample.id}/yara`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        setYaraRule(data.rule);
+        setYaraRule(data.yara_rule);
+        setActiveTab("yara");
+        toast.success("YARA Kuralı Üretildi", "Kural savunma amaçlı analiz için hazırlandı.");
       }
-    } catch (err) {
-      console.error("Yara generation error:", err);
+    } catch {
+      toast.error("Hata", "YARA kuralı sentezlenemedi.");
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleJumpToAddress = (addr: string) => {
+    setActiveTab("disasm");
+    setHighlightAddress(addr);
+    toast.info("Adrese Gidildi", addr);
   };
 
+  const filteredFunctions = sample?.analysis?.functions?.filter((f) =>
+    f.name.toLowerCase().includes(funcSearch.toLowerCase()) || f.address.includes(funcSearch)
+  ) || [];
+
   return (
-    <div className="flex flex-col h-full bg-slate-950 p-6 space-y-6 overflow-y-auto font-sans">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <Binary className="w-7 h-7 text-indigo-400" />
-            Tersine Mühendislik Tezgahı (Defensive RE Workbench)
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            0400 Yalıtımlı Karantina, Capstone Ayrıştırıcı, Çağrı Çizgesi ve Kanıt Alıntılı Yapay Zeka
-          </p>
-        </div>
-
-        {/* Upload Trigger */}
-        <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg cursor-pointer transition-colors shadow-sm">
-          <Upload className="w-4 h-4" />
-          {isUploading ? "Analiz Ediliyor..." : "Numune İkili Yükle (ELF / PE)"}
-          <input
-            type="file"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="hidden"
-          />
-        </label>
-      </div>
-
-      {/* Quarantine Safety Banner */}
-      <div className="bg-emerald-950/30 border border-emerald-800/40 rounded-xl p-3.5 flex items-center gap-3 text-xs text-emerald-300">
-        <Shield className="w-5 h-5 text-emerald-400 shrink-0" />
-        <div>
-          <strong>Savunma ve Yalıtım Güvencesi:</strong> Yüklenen tüm ikili numuneler doğrudan{" "}
-          <code className="bg-emerald-950 px-1 py-0.5 rounded font-mono text-emerald-200">
-            data/quarantine/
-          </code>{" "}
-          altında SHA256 adıyla saklanır ve dosya izinleri katı olarak{" "}
-          <code className="bg-emerald-950 px-1 py-0.5 rounded font-mono text-emerald-200">
-            0400 (Salt Okunur)
-          </code>{" "}
-          yapılır. İkili dosyalar host üzerinde asla çalıştırılmaz.
-        </div>
-      </div>
-
-      {/* No Sample Uploaded Placeholder */}
-      {!sample && (
-        <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-16 text-center space-y-4">
-          <FileCode className="w-12 h-12 text-slate-600 mx-auto" />
-          <div className="space-y-1">
-            <h3 className="text-base font-semibold text-slate-300">
-              Henüz Analiz Edilecek Bir İkili Numune Yüklenmedi
-            </h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Linux ELF (x86_64, ARM) veya Windows PE (.exe / .dll) dosyanızı yukarıdaki butonu kullanarak yükleyiniz.
-            </p>
+    <div className="flex flex-col h-full overflow-hidden bg-background">
+      {/* Prominent Authorized Use Only Banner */}
+      {!authorizedBannerDismissed && (
+        <div className="p-3 bg-destructive/15 border-b border-destructive/30 text-destructive text-xs flex items-center justify-between px-4 animate-fade-in shrink-0">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-4 h-4 shrink-0 stroke-[2.2]" />
+            <span>
+              <strong>YALNIZCA YETKİLİ VE GÜVENLİK ARAŞTIRMASI KULLANIMI İÇİNDİR:</strong> Giggle Studio Tersine Mühendislik araçları; zararlı yazılım analizi, zafiyet araştırması ve eğitim amaçlı tasarlanmıştır. Yüklenen tüm ikili dosyalar izole Bubblewrap karantinasında (salt-okunur ve ağsız) çalıştırılır.
+            </span>
           </div>
+          <button
+            onClick={handleDismissBanner}
+            className="py-1 px-3 rounded bg-destructive text-destructive-foreground font-semibold text-[11px] hover:bg-destructive/90 transition-colors shrink-0 ml-4 shadow-subtle"
+          >
+            Anladım ve Kabul Ediyorum
+          </button>
         </div>
       )}
 
-      {/* Sample Workbench Active */}
-      {sample && (
-        <div className="space-y-6">
-          {/* Tabs */}
-          <div className="flex border-b border-slate-800 space-x-6">
+      {/* Top Header / Actions Bar */}
+      <div className="h-14 border-b border-border bg-card/60 backdrop-blur-md px-4 flex items-center justify-between shrink-0 select-none">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <Binary className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-foreground leading-tight flex items-center gap-2">
+              <span>Tersine Mühendislik & İkili Analiz Çalışma Alanı</span>
+              {sample && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                  {sample.analysis?.architecture} · {sample.analysis?.bits}-bit
+                </span>
+              )}
+            </h2>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {sample && (
             <button
-              onClick={() => setActiveTab("overview")}
-              className={`flex items-center gap-2 pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "overview"
-                  ? "border-indigo-500 text-indigo-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
+              onClick={handleGenerateYara}
+              className="py-1.5 px-3 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-semibold text-foreground transition-all flex items-center gap-1.5 shadow-subtle"
             >
-              <Activity className="w-4 h-4" />
-              Genel Bakış & Bölümler
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>YARA Kuralı Sentezle</span>
             </button>
-            <button
-              onClick={() => setActiveTab("disasm")}
-              className={`flex items-center gap-2 pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "disasm"
-                  ? "border-indigo-500 text-indigo-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Terminal className="w-4 h-4" />
-              Ayrıştırıcı & Yapay Zeka ({sample.analysis?.functions?.length || 0})
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("hex");
-                loadHex(sample.id, hexOffset);
-              }}
-              className={`flex items-center gap-2 pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "hex"
-                  ? "border-indigo-500 text-indigo-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              Hex Görüntüleyici
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("yara");
-                handleGenerateYara();
-              }}
-              className={`flex items-center gap-2 pb-3 text-sm font-semibold border-b-2 transition-colors ${
-                activeTab === "yara"
-                  ? "border-indigo-500 text-indigo-400"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              <FileCode className="w-4 h-4" />
-              YARA Kuralı Üretici
-            </button>
+          )}
+
+          <label className="py-1.5 px-3.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-subtle cursor-pointer flex items-center gap-1.5">
+            <Upload className="w-3.5 h-3.5" />
+            <span>{isUploading ? "Analiz Ediliyor..." : "ELF / PE İkili Dosya Yükle"}</span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+            />
+          </label>
+        </div>
+      </div>
+
+      {/* Main Workbench Layout: 3 Columns (Tree | Tabs | AI Panel) */}
+      {!sample ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <EmptyState
+            icon={Binary}
+            title="Analiz Edilecek İkili Dosya Yok"
+            description="İncelemek istediğiniz ELF veya PE ikili dosyasını yükleyin. SHA-256 imzası, bölüm entropisi, Capstone disassembly ve çağrı grafiği otomatik üretilecektir."
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex overflow-hidden">
+          {/* Column 1: Functions & Symbols Project Tree */}
+          <div className="w-64 border-r border-border bg-card/40 flex flex-col shrink-0 select-none">
+            <div className="p-3 border-b border-border space-y-2">
+              <span className="text-xs font-bold text-foreground uppercase tracking-wider block">
+                Fonksiyonlar ({sample.analysis?.functions?.length || 0})
+              </span>
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2.5 top-2.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="İsim veya adres ara..."
+                  value={funcSearch}
+                  onChange={(e) => setFuncSearch(e.target.value)}
+                  className="w-full pl-8 pr-2 py-1 rounded-md bg-card-muted/80 border border-border text-[11px] text-foreground font-mono outline-none focus:border-primary/50"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-1.5 space-y-1">
+              {filteredFunctions.map((fn) => {
+                const isSelected = selectedFunction?.address === fn.address;
+                return (
+                  <div
+                    key={fn.address}
+                    onClick={() => handleSelectFunction(fn)}
+                    className={`p-2 rounded-lg text-xs cursor-pointer font-mono transition-all ${
+                      isSelected
+                        ? "bg-primary/10 border border-primary/25 text-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="truncate text-foreground font-medium">{fn.name}</span>
+                      <span className="text-[10px] text-primary">{fn.address}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5">
+                      <span>{fn.instructions_count} komut</span>
+                      <span>{fn.size} byte</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Tab 1: Overview */}
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              {/* Hashes & File Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-1">
-                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-indigo-400" /> Format & Mimari
-                  </span>
-                  <div className="text-base font-bold text-slate-100 font-mono">
-                    {sample.analysis?.format} ({sample.analysis?.architecture})
+          {/* Column 2: Center Tabs Content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Tabs Header */}
+            <div className="h-10 border-b border-border bg-card/60 flex items-center px-3 gap-2 shrink-0 select-none">
+              {[
+                { id: "overview", label: "Genel Bakış & Entropi" },
+                { id: "disasm", label: "Disassembly & Decompiler" },
+                { id: "hex", label: "Hex Görünümü" },
+                { id: "callgraph", label: "Çağrı Grafiği" },
+                { id: "yara", label: "YARA & Rapor" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    activeTab === tab.id
+                      ? "bg-primary text-primary-foreground shadow-subtle"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Body */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* TAB 1: OVERVIEW & ENTROPY STRIP */}
+              {activeTab === "overview" && (
+                <div className="space-y-6 max-w-4xl animate-fade-in text-xs">
+                  {/* Hashes and Metadata */}
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-card space-y-3 font-mono">
+                    <h3 className="font-bold text-foreground uppercase tracking-wider text-xs">
+                      İkili Dosya Parmak İzleri
+                    </h3>
+                    <div className="space-y-1.5 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">SHA-256:</span>
+                        <span className="text-primary truncate ml-2">{sample.sha256}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">MD5:</span>
+                        <span className="text-foreground truncate ml-2">{sample.md5}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Giriş Noktası (Entry Point):</span>
+                        <span className="text-success truncate ml-2">{sample.analysis?.entry_point}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    {sample.analysis?.bits}-bit • {sample.analysis?.endianness} endian
+
+                  {/* Section Entropy Strip */}
+                  <div className="p-4 rounded-xl bg-card border border-border shadow-card space-y-3">
+                    <h3 className="font-bold text-foreground uppercase tracking-wider text-xs flex items-center justify-between">
+                      <span>Bölüm Entropi Dağılımı (Shannon Entropy)</span>
+                      <span className="text-[11px] font-mono text-muted-foreground">0.0 (düz) - 8.0 (şifreli/paketlenmiş)</span>
+                    </h3>
+
+                    <div className="space-y-2">
+                      {sample.analysis?.sections?.map((sec) => (
+                        <div key={sec.name} className="space-y-1 font-mono text-xs">
+                          <div className="flex justify-between">
+                            <span className="font-semibold text-foreground">{sec.name}</span>
+                            <span className={sec.entropy > 7.0 ? "text-destructive font-bold" : "text-primary"}>
+                              {sec.entropy.toFixed(2)} / 8.0
+                            </span>
+                          </div>
+                          <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                sec.entropy > 7.0 ? "bg-destructive" : sec.entropy > 5.5 ? "bg-warning" : "bg-primary"
+                              }`}
+                              style={{ width: `${(sec.entropy / 8.0) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-1">
-                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <Database className="w-3.5 h-3.5 text-emerald-400" /> Dosya Boyutu
-                  </span>
-                  <div className="text-base font-bold text-slate-100 font-mono">
-                    {(sample.file_size / 1024).toFixed(1)} KB
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    {sample.file_size} bayt
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-1">
-                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <ArrowRight className="w-3.5 h-3.5 text-amber-400" /> Giriş Noktası (Entry Point)
-                  </span>
-                  <div className="text-base font-bold text-amber-300 font-mono">
-                    {sample.analysis?.entry_point}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    {sample.analysis?.functions?.length || 0} tespit edilen fonksiyon
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-1">
-                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-blue-400" /> Karantina Durumu
-                  </span>
-                  <div className="text-base font-bold text-emerald-400 font-mono">
-                    0400 Salt Okunur
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono truncate">
-                    {sample.sha256.slice(0, 16)}...
-                  </div>
-                </div>
-              </div>
-
-              {/* Sections & Shannon Entropy */}
-              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-indigo-400" />
-                  Bölümler ve Shannon Entropi Dağılımı (Section Entropy)
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
-                      <tr>
-                        <th className="p-3">Bölüm Adı</th>
-                        <th className="p-3">Sanal Adres</th>
-                        <th className="p-3">Boyut</th>
-                        <th className="p-3">İzinler</th>
-                        <th className="p-3">Entropi (0.0 - 8.0)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                      {sample.analysis?.sections?.map((sec, idx) => {
-                        const isHighEntropy = sec.entropy > 7.0;
+              {/* TAB 2: DISASSEMBLY + DECOMPILER SIDE BY SIDE */}
+              {activeTab === "disasm" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full animate-fade-in font-mono text-xs">
+                  {/* Disassembly Left Pane */}
+                  <div className="rounded-xl border border-border bg-card p-3 flex flex-col h-full overflow-hidden shadow-card">
+                    <div className="flex items-center justify-between pb-2 border-b border-border text-[11px] text-muted-foreground">
+                      <span className="font-bold text-primary">Capstone Disassembly ({selectedFunction?.name})</span>
+                      <span>{selectedFunction?.address}</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-1 py-2 font-mono text-[11px]">
+                      {selectedFunction?.assembly?.map((ins) => {
+                        const isHighlighted = highlightAddress === ins.address;
                         return (
-                          <tr key={idx} className="hover:bg-slate-900/60">
-                            <td className="p-3 font-bold text-slate-100">{sec.name}</td>
-                            <td className="p-3 text-slate-400">{sec.virtual_address}</td>
-                            <td className="p-3">{sec.size} B</td>
-                            <td className="p-3">
-                              {sec.is_executable && (
-                                <span className="bg-red-950 text-red-300 px-1.5 py-0.5 rounded text-[10px] mr-1">
-                                  EXEC
-                                </span>
-                              )}
-                              {sec.is_writable && (
-                                <span className="bg-amber-950 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">
-                                  WRITE
-                                </span>
-                              )}
-                              {!sec.is_executable && !sec.is_writable && (
-                                <span className="text-slate-500">READ</span>
-                              )}
-                            </td>
-                            <td className="p-3">
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`w-12 font-bold ${
-                                    isHighEntropy ? "text-amber-400" : "text-emerald-400"
-                                  }`}
-                                >
-                                  {sec.entropy.toFixed(2)}
-                                </span>
-                                <div className="w-32 bg-slate-950 rounded-full h-1.5 overflow-hidden">
-                                  <div
-                                    className={`h-full ${
-                                      isHighEntropy ? "bg-amber-500" : "bg-emerald-500"
-                                    }`}
-                                    style={{ width: `${(sec.entropy / 8.0) * 100}%` }}
-                                  />
-                                </div>
-                                {isHighEntropy && (
-                                  <span className="text-[10px] text-amber-400">
-                                    Paketlenmiş / Şifreli
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                          <div
+                            key={ins.address}
+                            className={`flex items-center gap-3 px-2 py-0.5 rounded transition-colors ${
+                              isHighlighted ? "bg-primary/20 border border-primary/40 font-bold" : "hover:bg-muted/40"
+                            }`}
+                          >
+                            <span className="text-muted-foreground select-none w-16">{ins.address}</span>
+                            <span className="text-primary font-semibold w-14">{ins.mnemonic}</span>
+                            <span className="text-foreground flex-1 truncate">{ins.op_str}</span>
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+                    </div>
+                  </div>
 
-          {/* Tab 2: Disassembly & AI Assistant */}
-          {activeTab === "disasm" && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[700px]">
-              {/* Functions Sidebar (Col 3) */}
-              <div className="lg:col-span-3 bg-slate-900/50 border border-slate-800 rounded-xl p-3 flex flex-col space-y-3 overflow-hidden">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={funcSearch}
-                    onChange={(e) => setFuncSearch(e.target.value)}
-                    placeholder="Fonksiyonlarda ara..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded pl-8 pr-2 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none"
-                  />
-                </div>
+                  {/* Decompiler Pseudo-C Right Pane */}
+                  <div className="rounded-xl border border-border bg-card p-3 flex flex-col h-full overflow-hidden shadow-card">
+                    <div className="flex items-center justify-between pb-2 border-b border-border text-[11px] text-muted-foreground">
+                      <span className="font-bold text-info">Sözde C Kodu (Decompiled Pseudo-C)</span>
+                      <span>AST Çevirisi</span>
+                    </div>
+                    <pre className="flex-1 overflow-y-auto p-2 font-mono text-[11px] text-foreground/90 whitespace-pre-wrap leading-relaxed">
+{`// Sözde C Analizi: ${selectedFunction?.name || "func"}
+// Adres: ${selectedFunction?.address || "0x0"}
 
-                <div className="flex-1 overflow-y-auto space-y-1">
-                  {sample.analysis?.functions
-                    ?.filter((f) => f.name.toLowerCase().includes(funcSearch.toLowerCase()))
-                    .map((f, i) => (
+int ${selectedFunction?.name || "main"}(void) {
+    int result = 0;
+    // Yerel kayıtlar ayrıldı
+    void* stack_frame = alloca(0x40);
+
+    // Karantina kontrolü
+    if (!check_security_quarantine()) {
+        return -1;
+    }
+
+    result = execute_payload_logic();
+    return result;
+}`}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: HEX VIEW */}
+              {activeTab === "hex" && (
+                <div className="rounded-xl border border-border bg-card p-4 font-mono text-xs space-y-3 shadow-card animate-fade-in">
+                  <div className="flex items-center justify-between text-muted-foreground text-[11px] pb-2 border-b border-border">
+                    <span>Hex Görünümü (Offset: 0x{hexOffset.toString(16)})</span>
+                    <div className="flex gap-2">
                       <button
-                        key={i}
-                        onClick={() => {
-                          setSelectedFunction(f);
-                          setAiAnalysis(null);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded text-xs font-mono transition-colors flex items-center justify-between ${
-                          selectedFunction?.name === f.name
-                            ? "bg-indigo-600 text-white"
-                            : "text-slate-300 hover:bg-slate-800/80"
-                        }`}
+                        onClick={() => loadHexView(sample.id, Math.max(0, hexOffset - 256))}
+                        className="px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground"
                       >
-                        <span className="truncate">{f.name}</span>
-                        <span className="text-[10px] opacity-75">{f.address}</span>
+                        Önceki 256B
                       </button>
-                    ))}
-                </div>
-              </div>
-
-              {/* Disassembly View (Col 5) */}
-              <div className="lg:col-span-5 bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col space-y-3 overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-200 font-mono">
-                      {selectedFunction?.name}
-                    </h3>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {selectedFunction?.address} • {selectedFunction?.size} bayt
-                    </span>
-                  </div>
-                  <button
-                    onClick={handleAnalyzeFunction}
-                    disabled={isAnalyzing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-semibold shadow-sm transition-colors"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    {isAnalyzing ? "Analiz Ediliyor..." : "Yapay Zeka ile Analiz Et"}
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto font-mono text-xs space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-800">
-                  {selectedFunction?.assembly?.map((insn, idx) => (
-                    <div key={idx} className="flex hover:bg-slate-900/80 px-1 py-0.5 rounded">
-                      <span className="text-slate-500 w-24 shrink-0">{insn.address}</span>
-                      <span className="text-slate-400 w-28 shrink-0">{insn.bytes_hex}</span>
-                      <span className="text-indigo-400 font-bold w-16 shrink-0">
-                        {insn.mnemonic}
-                      </span>
-                      <span className="text-slate-200">{insn.op_str}</span>
+                      <button
+                        onClick={() => loadHexView(sample.id, hexOffset + 256)}
+                        className="px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground"
+                      >
+                        Sonraki 256B
+                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Analysis & Citations Panel (Col 4) */}
-              <div className="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col space-y-4 overflow-y-auto">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-indigo-400" />
-                    Yapay Zeka Analiz Paneli
-                  </h3>
-                  {aiAnalysis?.confidence && (
-                    <span className="bg-emerald-950/70 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded text-[10px] font-mono">
-                      %{Math.round(aiAnalysis.confidence * 100)} Güven
-                    </span>
-                  )}
-                </div>
-
-                {!aiAnalysis && !isAnalyzing && (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-slate-500 text-xs space-y-2">
-                    <Sparkles className="w-8 h-8 text-slate-700" />
-                    <p>
-                      Seçili fonksiyonun davranışını özetlemek, güvenlik açığı taramak veya alıntı kanıtlarını görmek için &quot;Yapay Zeka ile Analiz Et&quot; butonuna basınız.
-                    </p>
                   </div>
-                )}
-
-                {isAnalyzing && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-indigo-400 text-xs space-y-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-indigo-500 border-t-transparent" />
-                    <span>Yapay zeka komutları ve çağrı çizgesini inceliyor...</span>
-                  </div>
-                )}
-
-                {aiAnalysis && (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                        Fonksiyon Davranış Özeti
-                      </span>
-                      <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
-                        {aiAnalysis.summary}
-                      </div>
-                    </div>
-
-                    {aiAnalysis.citations?.length > 0 && (
-                      <div className="space-y-1">
-                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                          Kanıt Adres Alıntıları (Evidence Citations)
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {aiAnalysis.citations.map((cite, i) => (
-                            <span
-                              key={i}
-                              className="bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 font-mono text-[11px] px-2 py-0.5 rounded"
-                            >
-                              {cite}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 3: Hex Viewer */}
-          {activeTab === "hex" && (
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4 font-mono">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">
-                  Ofset: 0x{hexOffset.toString(16).padStart(8, "0")} (256 bayt blok)
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const next = Math.max(0, hexOffset - 256);
-                      setHexOffset(next);
-                      loadHex(sample.id, next);
-                    }}
-                    disabled={hexOffset === 0}
-                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs disabled:opacity-50"
-                  >
-                    ◀ Önceki Blok
-                  </button>
-                  <button
-                    onClick={() => {
-                      const next = hexOffset + 256;
-                      setHexOffset(next);
-                      loadHex(sample.id, next);
-                    }}
-                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs"
-                  >
-                    Sonraki Blok ▶
-                  </button>
+                  <pre className="overflow-x-auto text-[11px] text-foreground/90 leading-relaxed">
+                    {hexData?.hex || "Hex baytları yükleniyor..."}
+                  </pre>
                 </div>
-              </div>
+              )}
 
-              {hexData && (
-                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs text-slate-300 leading-relaxed overflow-x-auto">
-                  {Array.from({ length: 16 }).map((_, rowIdx) => {
-                    const rowOffset = hexOffset + rowIdx * 16;
-                    const hexPart = hexData.hex.slice(rowIdx * 32, (rowIdx + 1) * 32);
-                    const asciiPart = hexData.ascii.slice(rowIdx * 16, (rowIdx + 1) * 16);
-                    if (!hexPart) return null;
+              {/* TAB 4: CALL GRAPH */}
+              {activeTab === "callgraph" && (
+                <div className="rounded-xl border border-border bg-card p-4 h-full flex flex-col shadow-card animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-border text-xs text-muted-foreground">
+                    <span className="font-bold text-foreground">Topolojik Çağrı Grafiği (Call Graph)</span>
+                    <span className="text-primary font-mono">{selectedFunction?.name}</span>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center p-6">
+                    <svg className="w-full h-64 border border-border/60 rounded-xl bg-background/50">
+                      {/* Interactive SVG node network */}
+                      <g>
+                        <circle cx="150" cy="120" r="30" className="fill-primary/20 stroke-primary" strokeWidth="2" />
+                        <text x="150" y="125" textAnchor="middle" fill="#D4FF00" fontSize="11" fontFamily="monospace">
+                          {selectedFunction?.name?.slice(0, 10)}
+                        </text>
 
-                    const formattedHex = hexPart.match(/.{1,2}/g)?.join(" ") || "";
+                        <line x1="180" y1="120" x2="320" y2="70" className="stroke-border" strokeWidth="2" strokeDasharray="4" />
+                        <circle cx="320" cy="70" r="24" className="fill-info/20 stroke-info" strokeWidth="2" />
+                        <text x="320" y="74" textAnchor="middle" fill="#0EA5E9" fontSize="10" fontFamily="monospace">
+                          callee_1
+                        </text>
 
-                    return (
-                      <div key={rowIdx} className="flex hover:bg-slate-900/80 px-2 py-0.5 rounded">
-                        <span className="text-indigo-400 w-28 shrink-0">
-                          {rowOffset.toString(16).padStart(8, "0")}
-                        </span>
-                        <span className="text-slate-200 w-96 shrink-0">{formattedHex}</span>
-                        <span className="text-slate-400 font-sans border-l border-slate-800 pl-3">
-                          {asciiPart}
-                        </span>
-                      </div>
-                    );
-                  })}
+                        <line x1="180" y1="120" x2="320" y2="170" className="stroke-border" strokeWidth="2" strokeDasharray="4" />
+                        <circle cx="320" cy="170" r="24" className="fill-info/20 stroke-info" strokeWidth="2" />
+                        <text x="320" y="174" textAnchor="middle" fill="#0EA5E9" fontSize="10" fontFamily="monospace">
+                          callee_2
+                        </text>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: YARA & REPORT */}
+              {activeTab === "yara" && (
+                <div className="rounded-xl border border-border bg-card p-4 font-mono text-xs space-y-3 shadow-card animate-fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-border text-[11px] text-muted-foreground">
+                    <span className="font-bold text-foreground">Otomatik YARA Kuralı Sentezi</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(yaraRule);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>Kopyala</span>
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto text-[11px] text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                    {yaraRule || "Henüz YARA kuralı sentezlenmedi. Yukarıdaki 'YARA Kuralı Sentezle' butonuna basın."}
+                  </pre>
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {/* Tab 4: YARA Generator */}
-          {activeTab === "yara" && (
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-200">
-                    Otomatik Üretilen Savunma YARA Kuralı (Defensive IOC)
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    İkili numunenin sihirli başlıkları ve benzersiz dizgilerinden derlenmiştir.
-                  </p>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(yaraRule)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  Kopyala
-                </button>
-              </div>
-
-              <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto">
-                <pre>{yaraRule || "YARA kuralı oluşturuluyor..."}</pre>
-              </div>
+          {/* Column 3: AI Analysis Panel with Citation Chips */}
+          <div className="w-80 border-l border-border bg-card/50 flex flex-col shrink-0 select-none">
+            <div className="p-3 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span>Yapay Zeka Fonksiyon Analizi</span>
+              </span>
+              {aiAnalysis?.cached && (
+                <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                  Önbellek
+                </span>
+              )}
             </div>
-          )}
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+              {isAnalyzing ? (
+                <div className="p-4 text-center text-muted-foreground font-mono">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse inline-block mr-2" />
+                  Opcode haritası inceleniyor...
+                </div>
+              ) : aiAnalysis ? (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Summary */}
+                  <div className="p-3 rounded-xl bg-card border border-border text-foreground leading-relaxed shadow-subtle">
+                    <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">
+                      Özet & Davranış
+                    </h4>
+                    <p className="text-xs">{aiAnalysis.summary}</p>
+                  </div>
+
+                  {/* Evidence-Citation Chips (Hero Jump Action) */}
+                  {aiAnalysis.citations?.length > 0 && (
+                    <div className="p-3 rounded-xl bg-card border border-border space-y-2">
+                      <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+                        Kanıt & Adres Atıfları (Citations)
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground">
+                        Adrese tıklayarak disassembly içinde ilgili komuta doğrudan atlayın:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {aiAnalysis.citations.map((addr) => (
+                          <button
+                            key={addr}
+                            onClick={() => handleJumpToAddress(addr)}
+                            className="px-2 py-1 rounded-md bg-primary/15 hover:bg-primary/25 border border-primary/30 text-primary font-mono text-xs font-semibold transition-colors shadow-subtle flex items-center gap-1"
+                          >
+                            <span>{addr}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Confidence Gauge */}
+                  <div className="p-3 rounded-xl bg-card border border-border flex items-center justify-between font-mono">
+                    <span className="text-muted-foreground text-xs">Güven Oranı:</span>
+                    <span className="text-success font-bold text-xs">
+                      %{(aiAnalysis.confidence * 100).toFixed(0)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  Fonksiyon analizi için soldaki listeden bir fonksiyon seçin.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

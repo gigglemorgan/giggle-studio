@@ -27,9 +27,10 @@ echo "🔍 3. Running Pytest (Unit Tests)..."
 pytest backend/tests/unit -v -m "not gpu"
 
 if [ -d "${PROJECT_ROOT}/frontend/node_modules" ]; then
-    echo "🔍 4. Checking Frontend (TypeScript & Lint)..."
+    echo "🔍 4. Checking Frontend (TypeScript Build & Vitest Unit Tests)..."
     cd "${PROJECT_ROOT}/frontend"
     npm run build
+    npm test
     cd "${PROJECT_ROOT}"
 fi
 

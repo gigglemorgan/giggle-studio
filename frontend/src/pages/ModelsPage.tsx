@@ -4,119 +4,87 @@ import {
   DownloadCloud,
   RefreshCw,
   Sliders,
-  Power,
   Search,
-  Lock,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { OffloadPlanner } from "../features/OffloadPlanner";
+import { useModelStore } from "../store/modelStore";
+import { toast } from "../store/toastStore";
+import { EmptyState, Skeleton } from "../components/ui/StatusStates";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../components/ui/Dialog";
 
 export const ModelsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"local" | "hf">("local");
+  const { activeStatus, fetchActiveStatus } = useModelStore();
+
   const [localModels, setLocalModels] = useState<any[]>([]);
-  const [activeStatus, setActiveStatus] = useState<any>(null);
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedModelForOffload, setSelectedModelForOffload] = useState<any | null>(null);
 
-  // Hugging Face downloader states
+  // Hugging Face downloader state
+  const [showHfDialog, setShowHfDialog] = useState(false);
   const [hfRepoInput, setHfRepoInput] = useState("");
   const [hfModelInfo, setHfModelInfo] = useState<any>(null);
   const [hfSearching, setHfSearching] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<any>(null);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
-  const fetchModelsAndStatus = async () => {
+  const fetchModels = async () => {
     try {
       setLoading(true);
-      const [modelsRes, activeRes] = await Promise.all([
-        fetch("/api/models"),
-        fetch("/api/models/active"),
-      ]);
-      const modelsData = await modelsRes.json();
-      const activeData = await activeRes.json();
-      setLocalModels(modelsData);
-      setActiveStatus(activeData);
-    } catch (err: any) {
-      console.error("Modeller yüklenirken hata:", err);
+      const res = await fetch("/api/models");
+      if (res.ok) {
+        const data = await res.json();
+        setLocalModels(data);
+      }
+      await fetchActiveStatus();
+    } catch {
+      toast.error("Hata", "Modeller listelenemedi.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchModelsAndStatus();
-    const interval = setInterval(async () => {
-      try {
-        const activeRes = await fetch("/api/models/active");
-        const activeData = await activeRes.json();
-        setActiveStatus(activeData);
-      } catch {}
-    }, 5000);
-    return () => clearInterval(interval);
+    fetchModels();
   }, []);
 
   const handleScan = async () => {
     try {
       setScanning(true);
       const res = await fetch("/api/models/scan", { method: "POST" });
-      const scanned = await res.json();
-      setStatusMsg(`${scanned.length} model dizinde doğrulandı ve veritabanı ile eşitlendi.`);
-      fetchModelsAndStatus();
-    } catch (err: any) {
-      setStatusMsg("Tarama hatası: " + err.message);
+      if (res.ok) {
+        const scanned = await res.json();
+        toast.success("Dizin Tarandı", `${scanned.length} model yerel dizinde doğrulandı.`);
+        fetchModels();
+      }
+    } catch {
+      toast.error("Tarama Hatası", "Model dizini taranırken bir hata oluştu.");
     } finally {
       setScanning(false);
     }
-  };
-
-  const handleUnload = async () => {
-    try {
-      await fetch("/api/models/unload", { method: "POST" });
-      setStatusMsg("Model başarıyla bellekten kaldırıldı ve VRAM sıfırlandı.");
-      fetchModelsAndStatus();
-    } catch (err: any) {
-      setStatusMsg("Kapatma hatası: " + err.message);
-    }
-  };
-
-  const handleLoadModel = async (config: any) => {
-    if (!selectedModelForOffload) return;
-    const res = await fetch(`/api/models/${selectedModelForOffload.id}/load`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(config),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error?.message_tr || "Model yüklenemedi");
-    }
-    setStatusMsg(`${selectedModelForOffload.name} başarıyla yüklendi!`);
-    fetchModelsAndStatus();
   };
 
   const handleSearchHf = async () => {
     if (!hfRepoInput.trim()) return;
     try {
       setHfSearching(true);
-      setHfModelInfo(null);
-      setStatusMsg(null);
       const res = await fetch(`/api/models/hf/info?repo_id=${encodeURIComponent(hfRepoInput.trim())}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message_tr || "Hugging Face deposu bulunamadı.");
-      }
+      if (!res.ok) throw new Error("Model bilgileri alınamadı");
       const data = await res.json();
       setHfModelInfo(data);
     } catch (err: any) {
-      setStatusMsg(err.message);
+      toast.error("Hugging Face Hatası", err.message || "Model bulunamadı.");
     } finally {
       setHfSearching(false);
     }
   };
 
-  const handleStartDownload = async (filename: string) => {
+  const handleDownloadHfFile = async (filename: string) => {
     try {
-      setDownloadProgress({ filename, percent: 0, status: "başlatılıyor" });
+      setDownloadProgress({ filename, percent: 0, status: "Başlatılıyor..." });
       const res = await fetch("/api/models/hf/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,253 +100,389 @@ export const ModelsPage: React.FC = () => {
       while (reader) {
         const { value, done } = await reader.read();
         if (done) break;
+
         const text = decoder.decode(value);
         const lines = text.split("\n\n");
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            const jsonStr = line.replace("data: ", "");
+            const dataStr = line.replace("data: ", "").trim();
             try {
-              const data = JSON.parse(jsonStr);
-              setDownloadProgress(data);
-              if (data.status === "completed") {
-                setStatusMsg(`${filename} başarıyla indirildi ve yerel depoya eklendi!`);
-                fetchModelsAndStatus();
+              const parsed = JSON.parse(dataStr);
+              setDownloadProgress(parsed);
+              if (parsed.status === "completed") {
+                toast.success("İndirme Tamamlandı", `${filename} hazır.`);
+                setShowHfDialog(false);
+                fetchModels();
               }
             } catch {}
           }
         }
       }
-    } catch (err: any) {
-      setStatusMsg("İndirme hatası: " + err.message);
+    } catch {
+      toast.error("İndirme Hatası", "Model indirilirken bağlantı koptu.");
+    }
+  };
+
+  const filteredModels = localModels.filter((m) =>
+    m.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // VRAM fit helper (RTX 5070 has 12288 MB)
+  const getVramFit = (sizeMb: number) => {
+    if (sizeMb <= 10000) {
+      return {
+        label: "VRAM'e Tam Sığar",
+        status: "safe",
+        classes: "bg-success/15 text-success border-success/30",
+      };
+    } else if (sizeMb <= 14000) {
+      return {
+        label: "Kısmi Offload (VRAM + RAM)",
+        status: "warn",
+        classes: "bg-warning/15 text-warning border-warning/30",
+      };
+    } else {
+      return {
+        label: "Aşırı Büyük (RAM Ağırlıklı)",
+        status: "danger",
+        classes: "bg-destructive/15 text-destructive border-destructive/30",
+      };
     }
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-3">
-            <Layers className="w-6 h-6 text-blue-500" />
-            <span>Model Yöneticisi & Yerleşim (Offload)</span>
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            Yerel GGUF ve Transformers modellerinizi yönetin, Hugging Face'ten indirin ve VRAM yerleşimini planlayın.
-          </p>
-        </div>
-
-        {/* Tab toggles */}
-        <div className="flex gap-2 p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold">
-          <button
-            onClick={() => setActiveTab("local")}
-            className={`px-4 py-2 rounded-lg transition ${
-              activeTab === "local" ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Yerel Modeller ({localModels.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("hf")}
-            className={`px-4 py-2 rounded-lg transition ${
-              activeTab === "hf" ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Hugging Face İndirici
-          </button>
-        </div>
-      </div>
-
-      {statusMsg && (
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-xs flex items-center justify-between">
-          <span>{statusMsg}</span>
-          <button onClick={() => setStatusMsg(null)} className="text-slate-400 hover:text-white">✕</button>
-        </div>
-      )}
-
-      {/* Active Model Indicator Banner */}
-      {activeStatus?.alive && activeStatus?.current_model && (
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-800/60 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping"></div>
-            <div>
-              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Aktif Model Çalışıyor</span>
-              <p className="font-semibold text-slate-100 text-sm mt-0.5">{activeStatus.current_model}</p>
-              <p className="text-xs text-slate-400 font-mono">
-                GPU Katmanları: {activeStatus.config?.n_gpu_layers || 0} | Bağlam: {activeStatus.config?.n_ctx || 4096} | PID: {activeStatus.pid}
-              </p>
-            </div>
+    <div className="flex flex-col h-full overflow-y-auto bg-background p-4 md:p-6 space-y-6">
+        {/* Top Header & Actions */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+              <Layers className="w-6 h-6 text-primary" />
+              <span>Model Yönetimi & Yerleşim Stüdyosu</span>
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Yerel GGUF modellerinizi yönetin, Hugging Face'ten indirin ve RTX 5070 VRAM yerleşimini optimize edin.
+            </p>
           </div>
-          <button
-            onClick={handleUnload}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-red-600/80 hover:bg-red-500 text-white text-xs font-semibold transition"
-          >
-            <Power className="w-4 h-4" />
-            <span>Modeli Kapat (Unload)</span>
-          </button>
-        </div>
-      )}
 
-      {/* Local Models Tab */}
-      {activeTab === "local" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">DATA_DIR/models altındaki taranmış modeller</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleScan}
               disabled={scanning}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium transition disabled:opacity-50"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card hover:bg-card-muted text-xs font-medium text-foreground transition-all shadow-subtle"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${scanning ? "animate-spin text-primary" : ""}`} />
               <span>{scanning ? "Taranıyor..." : "Dizini Tara"}</span>
             </button>
+            <button
+              onClick={() => setShowHfDialog(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all shadow-subtle"
+            >
+              <DownloadCloud className="w-4 h-4" />
+              <span>Hugging Face İndir</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Bar & View Toggle */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Model adına göre filtrele..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/50"
+            />
           </div>
 
-          {localModels.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
-              <Layers className="w-10 h-10 text-slate-500 mx-auto" />
-              <h3 className="text-slate-300 font-semibold text-sm">Kayıtlı Model Bulunamadı</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Lütfen 'DATA_DIR/models' dizinine bir .gguf dosyası koyun veya Hugging Face sekmesinden indirin.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {localModels.map((m) => (
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-card border border-border">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "grid" ? "bg-primary text-primary-foreground shadow-subtle" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Izgara Görünümü"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === "list" ? "bg-primary text-primary-foreground shadow-subtle" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Liste Görünümü"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Local Models Section */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-xl border border-border bg-card/60 space-y-3">
+                <Skeleton className="w-2/3 h-4" />
+                <Skeleton className="w-1/3 h-3" />
+                <Skeleton className="w-full h-8 mt-2" />
+              </div>
+            ))}
+          </div>
+        ) : filteredModels.length === 0 ? (
+          <EmptyState
+            icon={Layers}
+            title="Yerel Model Bulunamadı"
+            description="Yerel model dizininde GGUF dosyası bulunamadı. Hugging Face üzerinden tek tıkla model indirebilirsiniz."
+            action={{
+              label: "Hugging Face Model İndir",
+              onClick: () => setShowHfDialog(true),
+              icon: DownloadCloud,
+            }}
+          />
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredModels.map((model) => {
+              const fit = getVramFit(model.file_size_mb);
+              const isActive = activeStatus?.alive && activeStatus.current_model?.includes(model.name);
+
+              return (
                 <div
-                  key={m.id}
-                  className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition"
+                  key={model.id}
+                  className={`rounded-xl border p-4 bg-card shadow-card flex flex-col justify-between transition-all ${
+                    isActive ? "border-primary/50 ring-1 ring-primary/30" : "border-border hover:border-border/80"
+                  }`}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-semibold text-slate-100 text-sm">{m.name}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                        {m.quantization}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                        {m.architecture}
-                      </span>
-                      {m.license && (
-                        <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">
-                          {m.license}
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-foreground truncate" title={model.name}>
+                          {model.name}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+                            {model.quantization || "Q4_K_M"}
+                          </span>
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {model.parameters ? `${model.parameters}` : "Bilinmiyor"}
+                          </span>
+                        </div>
+                      </div>
+                      {isActive && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/15 text-primary border border-primary/25 shrink-0 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                          Aktif
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 font-mono truncate max-w-2xl">{m.path}</p>
-                    <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
-                      <span>Parametreler: <strong className="text-slate-300">{m.parameters_count}</strong></span>
-                      <span>Bağlam: <strong className="text-slate-300">{m.context_length}</strong></span>
+
+                    {/* VRAM Fit Badge */}
+                    <div className={`p-2 rounded-lg border text-xs flex items-center justify-between ${fit.classes}`}>
+                      <span>VRAM Durumu:</span>
+                      <strong className="font-semibold">{fit.label}</strong>
+                    </div>
+
+                    {/* Specs Table */}
+                    <div className="grid grid-cols-2 gap-2 text-xs py-1 text-muted-foreground font-mono">
+                      <div>
+                        <span>Boyut: </span>
+                        <strong className="text-foreground">
+                          {model.file_size_mb >= 1024
+                            ? `${(model.file_size_mb / 1024).toFixed(2)} GB`
+                            : `${model.file_size_mb} MB`}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Bağlam: </span>
+                        <strong className="text-foreground">
+                          {model.context_length ? `${model.context_length} T` : "4096 T"}
+                        </strong>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  {/* Action Button */}
+                  <div className="pt-4 border-t border-border mt-3">
                     <button
-                      onClick={() => setSelectedModelForOffload(m)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition"
+                      onClick={() => setSelectedModelForOffload(model)}
+                      className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-all shadow-subtle"
                     >
                       <Sliders className="w-3.5 h-3.5" />
-                      <span>Yerleşim Ayarla & Yükle</span>
+                      <span>Yerleşim Planlayıcı & Yükle</span>
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        ) : (
+          /* List View */
+          <div className="rounded-xl border border-border bg-card overflow-hidden shadow-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-card-muted/70 border-b border-border text-muted-foreground uppercase text-[10px] font-semibold tracking-wider">
+                  <tr>
+                    <th className="p-3">Model Adı</th>
+                    <th className="p-3">Kuantizasyon</th>
+                    <th className="p-3">Boyut</th>
+                    <th className="p-3">Bağlam</th>
+                    <th className="p-3">VRAM Uyumu</th>
+                    <th className="p-3 text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {filteredModels.map((model) => {
+                    const fit = getVramFit(model.file_size_mb);
+                    const isActive = activeStatus?.alive && activeStatus.current_model?.includes(model.name);
 
-      {/* Hugging Face Tab */}
-      {activeTab === "hf" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-200">Hugging Face Deposunda GGUF Ara</h3>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Örn: Qwen/Qwen2.5-Coder-7B-Instruct-GGUF veya bartowski/Llama-3.2-3B-Instruct-GGUF"
-                value={hfRepoInput}
-                onChange={(e) => setHfRepoInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearchHf()}
-                className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
-              />
-              <button
-                onClick={handleSearchHf}
-                disabled={hfSearching}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition disabled:opacity-50"
-              >
-                <Search className="w-4 h-4" />
-                <span>{hfSearching ? "Aranıyor..." : "Modeli Getir"}</span>
-              </button>
+                    return (
+                      <tr key={model.id} className="hover:bg-muted/40 transition-colors">
+                        <td className="p-3 font-semibold text-foreground flex items-center gap-2">
+                          <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="truncate max-w-[200px]">{model.name}</span>
+                          {isActive && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/20 text-primary font-mono">
+                              Aktif
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 font-mono text-muted-foreground">{model.quantization || "Q4_K_M"}</td>
+                        <td className="p-3 font-mono text-foreground">
+                          {model.file_size_mb >= 1024
+                            ? `${(model.file_size_mb / 1024).toFixed(2)} GB`
+                            : `${model.file_size_mb} MB`}
+                        </td>
+                        <td className="p-3 font-mono text-muted-foreground">
+                          {model.context_length || 4096}
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${fit.classes}`}>
+                            {fit.label}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => setSelectedModelForOffload(model)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors shadow-subtle"
+                          >
+                            <Sliders className="w-3 h-3" />
+                            <span>Planlayıcı</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
+        )}
 
-          {/* Download progress card */}
-          {downloadProgress && (
-            <div className="p-5 rounded-xl bg-slate-900 border border-blue-500/30 space-y-3">
-              <div className="flex justify-between text-xs">
-                <span className="font-semibold text-slate-200">{downloadProgress.filename}</span>
-                <span className="text-blue-400 font-mono">
-                  %{downloadProgress.percent} {downloadProgress.speed_mb_s ? `(${downloadProgress.speed_mb_s} MB/s)` : ""}
-                </span>
-              </div>
-              <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-300"
-                  style={{ width: `${downloadProgress.percent}%` }}
+        {/* Offload Planner Hero Modal */}
+        {selectedModelForOffload && (
+          <OffloadPlanner
+            model={selectedModelForOffload}
+            onLoadModel={async (config) => {
+              const res = await fetch(`/api/models/${selectedModelForOffload.id}/load`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(config),
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error?.message_tr || "Model yüklenemedi");
+              }
+              await fetchModels();
+            }}
+            onClose={() => setSelectedModelForOffload(null)}
+          />
+        )}
+
+        {/* Hugging Face Download Dialog */}
+        <Dialog open={showHfDialog} onOpenChange={setShowHfDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <DownloadCloud className="w-5 h-5 text-primary" />
+                <span>Hugging Face GGUF İndirici</span>
+              </DialogTitle>
+              <DialogDescription>
+                Hugging Face deposunu arayın ve uyumlu GGUF kuantizasyon dosyalarını doğrudan indirin.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Repo ID (Örn: Qwen/Qwen2.5-0.5B-Instruct-GGUF)"
+                  value={hfRepoInput}
+                  onChange={(e) => setHfRepoInput(e.target.value)}
+                  className="flex-1 p-2 rounded-lg bg-card border border-border text-xs text-foreground outline-none focus:border-primary font-mono"
                 />
+                <button
+                  onClick={handleSearchHf}
+                  disabled={hfSearching}
+                  className="py-2 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {hfSearching ? "Aranıyor..." : "Dosyaları Getir"}
+                </button>
               </div>
-              {downloadProgress.eta_seconds !== undefined && downloadProgress.eta_seconds !== null && (
-                <p className="text-[11px] text-slate-400">Tahmini Kalan Süre: {downloadProgress.eta_seconds} saniye</p>
-              )}
-            </div>
-          )}
 
-          {/* Search results */}
-          {hfModelInfo && (
-            <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                <div>
-                  <h4 className="font-bold text-slate-100 text-base">{hfModelInfo.repo_id}</h4>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                    <span>Lisans: <strong className="text-slate-300">{hfModelInfo.license}</strong></span>
-                    <span>İndirme: <strong className="text-slate-300">{hfModelInfo.downloads}</strong></span>
-                    {hfModelInfo.gated && (
-                      <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                        <Lock className="w-3 h-3" /> Gated Model (HF_TOKEN Gerekir)
-                      </span>
-                    )}
+              {hfModelInfo && (
+                <div className="p-3 rounded-xl bg-card-muted/60 border border-border space-y-3 animate-fade-in text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">{hfModelInfo.repo_id}</span>
+                    <span className="px-2 py-0.5 rounded bg-muted text-[10px] text-muted-foreground font-mono">
+                      Lisans: {hfModelInfo.license || "Açık Kaynak"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    <div className="text-[11px] font-semibold text-muted-foreground">Kullanılabilir GGUF Dosyaları:</div>
+                    {hfModelInfo.gguf_files?.map((file: any) => (
+                      <div
+                        key={file.filename}
+                        className="flex items-center justify-between p-2 rounded-lg bg-card border border-border/80 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-mono text-foreground truncate">{file.filename}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            {(file.size_bytes / (1024 * 1024)).toFixed(1)} MB
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleDownloadHfFile(file.filename)}
+                          className="py-1 px-3 rounded bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors shadow-subtle shrink-0 ml-2"
+                        >
+                          İndir
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-slate-300">Mevcut GGUF Kuantizasyon Dosyaları:</span>
-                <div className="divide-y divide-slate-800/80 rounded-xl border border-slate-800 bg-slate-950 overflow-hidden">
-                  {hfModelInfo.gguf_files.map((f: any, idx: number) => (
-                    <div key={idx} className="p-3.5 flex items-center justify-between text-xs hover:bg-slate-900/50">
-                      <span className="font-mono text-slate-300">{f.filename}</span>
-                      <button
-                        onClick={() => handleStartDownload(f.filename)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition"
-                      >
-                        <DownloadCloud className="w-3.5 h-3.5" />
-                        <span>İndir</span>
-                      </button>
-                    </div>
-                  ))}
+              {downloadProgress && (
+                <div className="p-3 rounded-xl bg-card border border-border space-y-2 text-xs font-mono">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{downloadProgress.filename}</span>
+                    <span className="text-primary font-bold">{downloadProgress.percent}%</span>
+                  </div>
+                  <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-primary h-full transition-all duration-300 rounded-full"
+                      style={{ width: `${downloadProgress.percent}%` }}
+                    />
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Durum: {downloadProgress.status}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Offload Planner Modal */}
-      {selectedModelForOffload && (
-        <OffloadPlanner
-          model={selectedModelForOffload}
-          onLoadModel={handleLoadModel}
-          onClose={() => setSelectedModelForOffload(null)}
-        />
-      )}
-    </div>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 };

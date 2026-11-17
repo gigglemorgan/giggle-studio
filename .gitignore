@@ -79,6 +79,7 @@ yarn-debug.log*
 yarn-error.log*
 frontend/dist/
 frontend/.vite/
+frontend/test-results/
 coverage/
 
 # Logs & Temporary Files
