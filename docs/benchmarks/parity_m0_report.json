@@ -1,0 +1,15 @@
+{
+  "num_tokens": 7,
+  "vocab_size": 151936,
+  "max_abs_diff": 1.1339738368988037,
+  "mean_abs_diff": 0.11210495718993259,
+  "median_abs_diff": 0.08669090270996094,
+  "cosine_similarity": 0.9990132451057434,
+  "top1_agreement": 1.0,
+  "top5_agreement": 0.9142857142857144,
+  "top10_agreement": 0.9428571428571428,
+  "perplexity_a": 15.007158838923838,
+  "perplexity_b": 14.972850129732224,
+  "passed": true,
+  "details": null
+}

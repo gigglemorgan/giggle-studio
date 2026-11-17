@@ -20,6 +20,7 @@
 | **Phase 6** | Post-Training, Export, Reference Plugins, Final Polish | **Completed** | LoRA weight merger, automated Hugging Face Model Card generator with attribution ("Trained with Giggle Studio" by "Sedat-gigglemorgan"), complete Settings UI with server configuration, and reference plugins. Tagged `phase-6-done`. |
 | **Phase 6b** | RE Advanced (Sandboxed dynamic analysis, diff, test fixtures) | **Completed** | Transient sealed Bubblewrap execution sandbox for benign binary inspection, compiled benign ELF test fixtures, dynamic trace output capture. Tagged `phase-6-done`. |
 | **Phase 7** | Frontend Visual Redesign (Linear/Raycast Design System, Polish, Tokens, Tests) | **Completed** | Full visual overhaul to dark graphite `#0B0E15` + Electric Lime `#D4FF00` accent, self-hosted Inter & JetBrains Mono, code-split bundles (index 61 kB), 10/10 Vitest store/UI unit tests, 3/3 Playwright smoke tests, 20 visual screenshots in `docs/screenshots/`, and `scripts/check.sh` clean pass. |
+| **Engine M0** | Giggle Engine Ground Truth (PyTorch reference, baseline benchmark, logits parity) | **Completed** | PyTorch reference model for Qwen2/Llama3, GGUF loader with dequantization, logits comparison tool ($\ge 99.9\%$ cosine similarity, 100% top-1 agreement), tokenizer parity (100% on 8 test cases), llama.cpp baseline benchmark recorded under GPU lock. Tagged `engine-m0-done`. |
 
 ---
 
@@ -148,4 +149,57 @@ dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gz
 ✅ All checks passed successfully!
 ==========================================================
 ```
+
+---
+
+## 4. Giggle Engine (`giggle-engine`) Inference Development
+
+### Needs user action
+- **NVCC >= 12.8 Requirement for CMake sm_120:**
+  - Host `/usr/bin/nvcc` is CUDA 12.0 (`12.0.140`), which does not recognize `-arch=sm_120` (Blackwell requires CUDA Toolkit >= 12.8).
+  - *Optional User Action:* If building native `.cu` files using CMake and host `nvcc`, user can install CUDA Toolkit >= 12.8 or 13.x.
+  - *Current Engine Solution:* We verified that NVIDIA NVRTC 13.0 (`/usr/local/lib/ollama/cuda_v13/libnvrtc.so.13`) combined with CUDA Driver 13.2 (`libcuda.so.1`) natively targets and executes `compute_120` kernels directly on the RTX 5070 without requiring root/sudo or system alterations.
+
+### Verified (Commands + Real Numbers)
+
+#### 1. Baseline Benchmark Suite (`llama.cpp` build 11671, commit `ba3c05f71`)
+- **Protocol:** Executed under `flock /tmp/giggle-gpu.lock` via `scripts/gpu_run.sh` with 10 repetitions per case, Flash Attention ON (`-fa 1`), all layers on GPU (`-ngl 99`).
+- **Command:** `python engine/bench/benchmark_llama_cpp.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --repetitions 10`
+- **Output:**
+  - `pp512` (prompt processing 512): **36,367.48 t/s** (StdDev: 4552.16, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
+  - `pp4096` (prompt processing 4096): **37,889.25 t/s** (StdDev: 248.93, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
+  - `tg256` (llama-bench batch 1): **573.60 t/s** (StdDev: 6.38, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
+  - `e2e_decode_256` (llama-cli end-to-end decode): **431.00 t/s** (StdDev: 19.94, Peak VRAM: 1469 MB, 38°C, 3032 MHz, TTFT: 295 ms)
+  - Output files: `docs/benchmarks/baseline_llama_cpp.csv`, `docs/benchmarks/BASELINE.md`
+
+#### 2. Logits Parity Verification Tool vs llama.cpp
+- **Command:** `./scripts/gpu_run.sh env PYTHONPATH=. .venv/bin/python engine/tools/compare_logits.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --prompt "The capital of France is Paris." --output-json docs/benchmarks/parity_m0_report.json`
+- **Output:**
+  - Tokens Evaluated: 7
+  - Vocab Size: 151,936
+  - Max Abs Diff: 1.133974 (within 1.5 tolerance for Q4_K_M)
+  - Mean Abs Diff: 0.112105
+  - Median Abs Diff: 0.086691
+  - **Cosine Similarity: 0.999013** (99.90%)
+  - **Top-1 Agreement: 100.00%**
+  - Top-5 Agreement: 91.43%
+  - Top-10 Agreement: 94.29%
+  - Perplexity (Reference): 15.0072
+  - Perplexity (llama.cpp): 14.9729 (Difference: 0.0343)
+  - **Status: PASSED**
+
+#### 3. Tokenizer Parity
+- **Command:** `.venv/bin/python engine/tools/verify_tokenizer.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf`
+- **Output:** 100% token-for-token equality across 8 test suites (English, Turkish Unicode with diacritics, Python code, C++ CUDA, JSON/Markdown, Whitespace, Emojis, Special Chat Tokens).
+
+#### 4. Engine Unit Tests
+- **Command:** `.venv/bin/pytest engine/tests/ -v`
+- **Output:** 12 passed in 1.81s (`test_logits_comparison`, `test_reference_model`, `test_tokenizer_parity`).
+
+### NOT Verified
+- **Milestone M1:** Naive CUDA engine (F16, Q8_0, Q4_K_M) kernels and integration with giggle inference worker.
+- **Milestone M2:** Decode optimizations (weight repacking, fused kernels, GPU sampling).
+- **Milestone M3:** CUDA Graph launch overhead removal.
+- **Milestone M4:** Prefill tensor-core GEMM optimization.
+- **Milestone M5:** Side-by-side Giggle Engine vs llama.cpp benchmark in UI and Doctor checks.
 

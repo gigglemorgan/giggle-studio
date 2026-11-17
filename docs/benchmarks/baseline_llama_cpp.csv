@@ -1,0 +1,5 @@
+timestamp,model_name,backend,commit_hash,test_type,prompt_tokens,gen_tokens,runs_count,median_tps,stddev_tps,min_tps,max_tps,ttft_ms,peak_vram_mb,avg_temp_c,avg_sm_clock_mhz
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,pp512,512,0,10,36367.48,4552.16,31815.32,40919.63,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,pp4096,4096,0,10,37889.25,248.93,37640.32,38138.18,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,tg256,0,256,10,573.60,6.38,567.21,579.98,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-cli e2e),ba3c05f71,e2e_decode_256,32,256,10,431.00,19.94,376.10,437.60,299.61,1469.0,38.3,3032

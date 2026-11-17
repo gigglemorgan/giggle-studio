@@ -158,7 +158,7 @@ async def free_memory() -> dict[str, Any]:
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-            torch.cuda.ipc_collect()
+            torch.cuda.ipc_collect()  # type: ignore[no-untyped-call]
     except ImportError:
         pass
 
