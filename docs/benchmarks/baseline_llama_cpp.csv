@@ -1,5 +1,15 @@
-timestamp,model_name,backend,commit_hash,test_type,prompt_tokens,gen_tokens,runs_count,median_tps,stddev_tps,min_tps,max_tps,ttft_ms,peak_vram_mb,avg_temp_c,avg_sm_clock_mhz
-2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,pp512,512,0,10,36367.48,4552.16,31815.32,40919.63,0.00,1366.0,38.0,3030
-2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,pp4096,4096,0,10,37889.25,248.93,37640.32,38138.18,0.00,1366.0,38.0,3030
-2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-bench),ba3c05f71,tg256,0,256,10,573.60,6.38,567.21,579.98,0.00,1366.0,38.0,3030
-2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,llama.cpp (llama-cli e2e),ba3c05f71,e2e_decode_256,32,256,10,431.00,19.94,376.10,437.60,299.61,1469.0,38.3,3032
+timestamp,model_name,backend,commit_hash,test_type,prompt_tokens,gen_tokens,runs_count,median_tps,stddev_tps,cv_percent,min_tps,max_tps,ttft_ms,peak_vram_mb,avg_temp_c,avg_sm_clock_mhz
+2026-11-21 16:05:17,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,pp512,512,0,10,43239.30,4116.54,9.52%,29991.20,44769.40,0.00,3060.0,41.0,2992
+2026-11-21 16:05:17,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,pp4096,4096,0,10,36299.35,2146.69,5.91%,33489.90,40436.00,0.00,3060.0,41.0,2992
+2026-11-21 16:05:17,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,tg128,0,128,10,503.51,38.42,7.63%,389.61,514.60,0.00,3073.0,42.0,3030
+2026-11-21 16:05:17,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,tg256,0,256,10,507.19,3.33,0.66%,498.72,511.23,0.00,3073.0,42.0,3030
+2026-11-21 16:05:17,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,e2e_decode_256,32,256,10,371.60,39.99,10.76%,347.50,466.30,506.28,3343.0,38.4,3036
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp prebuilt (hermes b11671, ba3c05f71) [secondary]",ba3c05f71,pp512,512,0,10,36367.48,4552.16,12.52%,31815.32,40919.63,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp prebuilt (hermes b11671, ba3c05f71) [secondary]",ba3c05f71,pp4096,4096,0,10,37889.25,248.93,0.66%,37640.32,38138.18,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp prebuilt (hermes b11671, ba3c05f71) [secondary]",ba3c05f71,tg256,0,256,10,573.60,6.38,1.11%,567.21,579.98,0.00,1366.0,38.0,3030
+2026-11-17 13:57:08,qwen2.5-0.5b-instruct-q4_k_m.gguf,"llama.cpp prebuilt (hermes b11671, ba3c05f71) [secondary]",ba3c05f71,e2e_decode_256,32,256,10,431.00,19.94,4.63%,376.10,437.60,295.00,1469.0,38.0,3032
+2026-11-21 16:07:52,qwen2.5-3b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,pp512,512,0,10,9406.33,801.92,8.53%,7406.05,10080.60,0.00,3064.0,60.0,2970
+2026-11-21 16:07:52,qwen2.5-3b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,pp4096,4096,0,10,9339.60,41.31,0.44%,9295.21,9419.58,0.00,3064.0,60.0,2970
+2026-11-21 16:07:52,qwen2.5-3b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,tg128,0,128,10,199.33,10.25,5.14%,168.15,200.01,0.00,3064.0,56.0,3007
+2026-11-21 16:07:52,qwen2.5-3b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,tg256,0,256,10,179.21,17.07,9.53%,153.06,200.48,0.00,3064.0,56.0,3007
+2026-11-21 16:07:52,qwen2.5-3b-instruct-q4_k_m.gguf,"llama.cpp source (build 1, b019be0)",b019be0,e2e_decode_256,32,256,10,150.45,17.17,11.41%,138.20,181.10,409.98,3110.0,53.2,3024

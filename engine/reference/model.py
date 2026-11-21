@@ -128,7 +128,9 @@ class CausalSelfAttention(nn.Module):
         x: torch.Tensor,
         pos_offset: int = 0,
         mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        kv_cache: tuple[torch.Tensor, torch.Tensor] | None = None,
+        return_kv_cache: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         batch, seq_len, _ = x.shape
 
         q = self.q_proj(x)
@@ -144,27 +146,44 @@ class CausalSelfAttention(nn.Module):
         q = self.rotary_emb(q, pos_offset=pos_offset)
         k = self.rotary_emb(k, pos_offset=pos_offset)
 
+        if kv_cache is not None:
+            cached_k, cached_v = kv_cache
+            k = torch.cat([cached_k, k], dim=2)
+            v = torch.cat([cached_v, v], dim=2)
+        new_kv_cache = (k, v)
+
         # Repeat KV for GQA
-        k = repeat_kv(k, self.num_queries_per_kv)
-        v = repeat_kv(v, self.num_queries_per_kv)
+        k_rep = repeat_kv(k, self.num_queries_per_kv)
+        v_rep = repeat_kv(v, self.num_queries_per_kv)
 
         # Scaled dot-product attention
         scale = 1.0 / math.sqrt(self.head_dim)
-        scores = torch.matmul(q, k.transpose(-2, -1)) * scale
+        scores = torch.matmul(q, k_rep.transpose(-2, -1)) * scale
 
         if mask is not None:
             scores = scores + mask
         elif seq_len > 1:
-            causal_mask = torch.triu(
-                torch.full((seq_len, seq_len), float("-inf"), device=x.device), diagonal=1
-            )
+            total_kv_len = k.shape[2]
+            if total_kv_len == seq_len:
+                causal_mask = torch.triu(
+                    torch.full((seq_len, seq_len), float("-inf"), device=x.device), diagonal=1
+                )
+            else:
+                cached_len = total_kv_len - seq_len
+                prefix_mask = torch.zeros((seq_len, cached_len), device=x.device)
+                causal_part = torch.triu(
+                    torch.full((seq_len, seq_len), float("-inf"), device=x.device), diagonal=1
+                )
+                causal_mask = torch.cat([prefix_mask, causal_part], dim=-1)
             scores = scores + causal_mask
 
         probs = F.softmax(scores, dim=-1, dtype=torch.float32).to(x.dtype)
-        attn_out = torch.matmul(probs, v)
+        attn_out = torch.matmul(probs, v_rep)
 
         # Reshape back to [batch, seq_len, hidden_size]
         attn_out = attn_out.transpose(1, 2).contiguous().view(batch, seq_len, -1)
+        if return_kv_cache:
+            return self.o_proj(attn_out), new_kv_cache
         return self.o_proj(attn_out)
 
 
@@ -197,10 +216,30 @@ class DecoderLayer(nn.Module):
         x: torch.Tensor,
         pos_offset: int = 0,
         mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        kv_cache: tuple[torch.Tensor, torch.Tensor] | None = None,
+        return_kv_cache: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         # Pre-norm Self-Attention with residual
-        h = x + self.attn(self.attn_norm(x), pos_offset=pos_offset, mask=mask)
-        # Pre-norm MLP with residual
+        if return_kv_cache:
+            attn_out, new_kv = self.attn(
+                self.attn_norm(x),
+                pos_offset=pos_offset,
+                mask=mask,
+                kv_cache=kv_cache,
+                return_kv_cache=True,
+            )
+            h = x + attn_out
+            out = h + self.mlp(self.ffn_norm(h))
+            return out, new_kv
+
+        attn_out = self.attn(
+            self.attn_norm(x),
+            pos_offset=pos_offset,
+            mask=mask,
+            kv_cache=kv_cache,
+            return_kv_cache=False,
+        )
+        h = x + attn_out
         out = h + self.mlp(self.ffn_norm(h))
         return out
 
@@ -221,13 +260,35 @@ class ReferenceCausalLM(nn.Module):
         input_ids: torch.Tensor,
         pos_offset: int = 0,
         mask: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+        kv_caches: list[tuple[torch.Tensor, torch.Tensor]] | None = None,
+        return_kv_cache: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, list[tuple[torch.Tensor, torch.Tensor]]]:
         # input_ids shape: [batch, seq_len]
         h = self.token_embd(input_ids)
 
-        for layer in self.layers:
-            h = layer(h, pos_offset=pos_offset, mask=mask)
+        new_caches: list[tuple[torch.Tensor, torch.Tensor]] = []
+        for i, layer in enumerate(self.layers):
+            c_in = kv_caches[i] if kv_caches is not None else None
+            if return_kv_cache:
+                h, c_out = layer(
+                    h,
+                    pos_offset=pos_offset,
+                    mask=mask,
+                    kv_cache=c_in,
+                    return_kv_cache=True,
+                )
+                new_caches.append(c_out)
+            else:
+                h = layer(
+                    h,
+                    pos_offset=pos_offset,
+                    mask=mask,
+                    kv_cache=c_in,
+                    return_kv_cache=False,
+                )
 
         h = self.output_norm(h)
         logits = self.output(h)
+        if return_kv_cache:
+            return logits, new_caches
         return logits

@@ -1,5 +1,8 @@
 import gc
+import os
+import re
 import shutil
+import subprocess
 import sys
 from typing import Any
 
@@ -69,7 +72,48 @@ async def run_doctor_diagnostics() -> dict[str, Any]:
             }
         )
 
-    # 3. Memory & VRAM Margin
+    # 3. CUDA Toolkit (NVCC compiler >= 12.8 for Giggle Engine / sm_120)
+    cuda_home = os.environ.get("CUDA_HOME")
+    nvcc_path = shutil.which("nvcc")
+    if not nvcc_path and cuda_home:
+        candidate = os.path.join(cuda_home, "bin", "nvcc")
+        if os.path.exists(candidate):
+            nvcc_path = candidate
+    if not nvcc_path:
+        for fallback_dir in ["/usr/local/cuda-13.0/bin/nvcc", "/usr/local/cuda/bin/nvcc"]:
+            if os.path.exists(fallback_dir):
+                nvcc_path = fallback_dir
+                break
+
+    nvcc_version_tuple = (0, 0)
+    nvcc_version_str = "Bulunamadı"
+    if nvcc_path:
+        try:
+            ver_out = subprocess.check_output([nvcc_path, "--version"], text=True)
+            m = re.search(r"release\s+([0-9]+)\.([0-9]+)", ver_out)
+            if m:
+                nvcc_version_tuple = (int(m.group(1)), int(m.group(2)))
+                nvcc_version_str = (
+                    f"CUDA {nvcc_version_tuple[0]}.{nvcc_version_tuple[1]} ({nvcc_path})"
+                )
+        except Exception:
+            pass
+
+    nvcc_ok = nvcc_version_tuple >= (12, 8)
+    checks.append(
+        {
+            "name": "CUDA Toolkit (NVCC)",
+            "target": "nvcc >= 12.8 (Blackwell sm_120)",
+            "measured": nvcc_version_str,
+            "status": "pass" if nvcc_ok else "fail",
+            "fix": None
+            if nvcc_ok
+            else "Giggle Engine için CUDA Toolkit >= 12.8 gereklidir (RTX 5070 Blackwell sm_120 mimarisi). "
+            "CUDA_HOME ortam değişkenini ayarlayın (örn. CUDA_HOME=/usr/local/cuda-13.0) veya CUDA Toolkit 12.8+ kurun.",
+        }
+    )
+
+    # 4. Memory & VRAM Margin
     metrics = HardwareDetector.get_all_metrics()
     ram_mb = metrics["system"]["ram_total_mb"]
     ram_avail = metrics["system"]["ram_available_mb"]

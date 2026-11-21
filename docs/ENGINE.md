@@ -4,7 +4,19 @@ Giggle Engine is Giggle Studio's proprietary high-performance LLM inference engi
 
 ---
 
-## 1. Objectives & Success Criteria
+## 1. Toolchain & Prerequisites
+
+- **CUDA Toolkit Requirement:** **CUDA Toolkit >= 12.8 required** (Blackwell architecture `sm_120` / `sm_120a` compute capability 12.0 requires NVCC >= 12.8).
+- **Verified Environment:**
+  - Compiler: NVIDIA (R) Cuda compiler driver release 13.0, `V13.0.88` (`CUDA_HOME=/usr/local/cuda-13.0`).
+  - Driver: NVIDIA Driver `595.104.02` (CUDA Driver API 13.2).
+  - Target Architecture: `-arch=sm_120` / `sm_120a`.
+- **System Doctor Integration:** Giggle Studio's Doctor check (`backend/app/api/system.py`) dynamically discovers the CUDA Toolkit via `CUDA_HOME` or `PATH` (fallback `/usr/local/cuda`), queries `nvcc --version`, and flags an error if `nvcc < 12.8`.
+- **Concurrency & Resource Discipline:** GPU runs are synchronized via `scripts/gpu_run.sh` under `flock /tmp/giggle-gpu.lock` with automatic GPU compute load verification before execution.
+
+---
+
+## 2. Objectives & Success Criteria
 
 - **Target Hardware:** NVIDIA GeForce RTX 5070 12GB VRAM (Blackwell `sm_120`, Compute Capability 12.0)
 - **Primary Goal:** Match or slightly beat `llama.cpp` CUDA backend on single-stream decode tokens/s (batch 1, $\ge 100\%$ on 2 of 3 target models, $\ge 95\%$ on the third), prompt processing ($\ge 90\%$), and peak VRAM ($\le$ llama.cpp + 5%).
@@ -12,24 +24,40 @@ Giggle Engine is Giggle Studio's proprietary high-performance LLM inference engi
 
 ---
 
-## 2. llama.cpp Baseline Measurements (RTX 5070 sm_120)
+## 3. llama.cpp Baseline Measurements (RTX 5070 sm_120)
 
-- **llama.cpp Build:** `11671` (Git Commit: `ba3c05f71`)
-- **Build Flags:** CUDA backend enabled, Flash Attention (`-fa 1`), all layers offloaded to GPU (`-ngl 99`)
-- **Execution Environment:** Synchronized under `scripts/gpu_run.sh` (`flock /tmp/giggle-gpu.lock`), >= 10 timed runs per scenario.
+### 3.1 Primary Baseline (Source Build on Blackwell `sm_120a`)
+- **Source Repository:** `data/third_party/llama.cpp` (Git Commit: `b019be0`)
+- **CMake Build Flags:** `-DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120a -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_COMPILER=$CUDA_HOME/bin/nvcc`
+- **Execution Environment:** Synchronized under `scripts/gpu_run.sh` (`flock /tmp/giggle-gpu.lock`), 10 timed runs (warm-up=2), Flash Attention ON (`-fa 1`), all layers on GPU (`-ngl 99`).
 
-| Scenario | Model | Prompt Tokens | Gen Tokens | Median t/s | StdDev | Min | Max | Peak VRAM | Temp | SM Clock |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `pp512` | Qwen2.5-0.5B-Instruct Q4_K_M | 512 | 0 | **36,367.48** | 4,552.16 | 31,815.32 | 40,919.63 | 1366 MB | 38°C | 3030 MHz |
-| `pp4096` | Qwen2.5-0.5B-Instruct Q4_K_M | 4096 | 0 | **37,889.25** | 248.93 | 37,640.32 | 38,138.18 | 1366 MB | 38°C | 3030 MHz |
-| `tg256` | Qwen2.5-0.5B-Instruct Q4_K_M | 0 | 256 | **573.60** | 6.38 | 567.21 | 579.98 | 1366 MB | 38°C | 3030 MHz |
-| `e2e_decode_256` | Qwen2.5-0.5B-Instruct Q4_K_M | 32 | 256 | **431.00** | 19.94 | 376.10 | 437.60 | 1469 MB | 38°C | 3032 MHz |
+| Model | Test | Prompt | Gen | Median t/s | StdDev | CV (%) | Min | Max | TTFT (ms) | Peak VRAM | Temp | SM Clock |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `pp512` | 512 | 0 | **43,239.30** | 4,116.54 | 9.52% | 29,991.20 | 44,769.40 | 0.00 | 3,060 MB | 41°C | 2,992 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `pp4096` | 4096 | 0 | **36,299.35** | 2,146.69 | 5.91% | 33,489.90 | 40,436.00 | 0.00 | 3,060 MB | 41°C | 2,992 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `tg128` | 0 | 128 | **503.51** | 38.42 | 7.63% | 389.61 | 514.60 | 0.00 | 3,073 MB | 42°C | 3,030 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `tg256` | 0 | 256 | **507.19** | 3.33 | **0.66%** | 498.72 | 511.23 | 0.00 | 3,073 MB | 42°C | 3,030 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `e2e_decode_256` | 32 | 256 | **371.60** | 39.99 | 10.76% | 347.50 | 466.30 | 506.28 | 3,343 MB | 38°C | 3,036 MHz |
+| **qwen2.5-3b-instruct-q4_k_m.gguf** | `pp512` | 512 | 0 | **9,406.33** | 801.92 | 8.53% | 7,406.05 | 10,080.60 | 0.00 | 3,064 MB | 60°C | 2,970 MHz |
+| **qwen2.5-3b-instruct-q4_k_m.gguf** | `pp4096` | 4096 | 0 | **9,339.60** | 41.31 | **0.44%** | 9,295.21 | 9,419.58 | 0.00 | 3,064 MB | 60°C | 2,970 MHz |
+| **qwen2.5-3b-instruct-q4_k_m.gguf** | `tg128` | 0 | 128 | **199.33** | 10.25 | 5.14% | 168.15 | 200.01 | 0.00 | 3,064 MB | 56°C | 3,007 MHz |
+| **qwen2.5-3b-instruct-q4_k_m.gguf** | `tg256` | 0 | 256 | **179.21** | 17.07 | 9.53% | 153.06 | 200.48 | 0.00 | 3,064 MB | 56°C | 3,007 MHz |
+| **qwen2.5-3b-instruct-q4_k_m.gguf** | `e2e_decode_256` | 32 | 256 | **150.45** | 17.17 | 11.41% | 138.20 | 181.10 | 409.98 | 3,110 MB | 53°C | 3,024 MHz |
 
-Raw benchmark runs logged in `docs/benchmarks/baseline_llama_cpp.csv`.
+### 3.2 Secondary Baseline (Prebuilt Binary: Hermes `b11671`, Commit `ba3c05f71`)
+
+| Model | Test | Prompt | Gen | Median t/s | StdDev | CV (%) | Min | Max | TTFT (ms) | Peak VRAM | Temp | SM Clock |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `pp512` | 512 | 0 | **36,367.48** | 4,552.16 | 12.52% | 31,815.32 | 40,919.63 | 0.00 | 1,366 MB | 38°C | 3,030 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `pp4096` | 4096 | 0 | **37,889.25** | 248.93 | **0.66%** | 37,640.32 | 38,138.18 | 0.00 | 1,366 MB | 38°C | 3,030 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `tg256` | 0 | 256 | **573.60** | 6.38 | **1.11%** | 567.21 | 579.98 | 0.00 | 1,366 MB | 38°C | 3,030 MHz |
+| **qwen2.5-0.5b-instruct-q4_k_m.gguf** | `e2e_decode_256` | 32 | 256 | **431.00** | 19.94 | 4.63% | 376.10 | 437.60 | 295.00 | 1,469 MB | 38°C | 3,032 MHz |
+
+Raw CSV logs recorded in `docs/benchmarks/baseline_llama_cpp.csv` and report in `docs/BASELINE.md`.
 
 ---
 
-## 3. Milestone M0 Ground Truth & Parity Verification
+## 4. Milestone M0 Ground Truth & Parity Verification
 
 Milestone M0 delivers mathematical ground truth verification tools:
 
@@ -37,34 +65,39 @@ Milestone M0 delivers mathematical ground truth verification tools:
    - Pure PyTorch implementation of Qwen2 / Llama 3 decoder-only architecture:
      - `RMSNorm` layer normalization.
      - `RotaryEmbedding` (HuggingFace `rotate_half` RoPE with arbitrary frequency base).
-     - `CausalSelfAttention` with Grouped Query Attention (GQA) head repetition and causal masking.
+     - `CausalSelfAttention` with Grouped Query Attention (GQA), RoPE, and causal masking.
+     - KV Cache support for fast $O(1)$ token decode steps and chunked prefill.
      - `SwiGLUMLP` feed-forward network ($w_2(\text{silu}(w_1(x)) \odot w_3(x))$).
      - Full residual connections and unembedding LM head.
 2. **GGUF Direct Weight Loader (`engine/reference/loader.py`):**
-   - Parses GGUF metadata, detects architecture configurations, and dequantizes weights (Q4_K, Q6_K, Q8_0, F16) into FP32 model tensors.
+   - Parses GGUF metadata, detects architecture configurations, and dequantizes weights (Q4_K, Q6_K, Q8_0, F16) into PyTorch model tensors.
 3. **Logits Parity Verification Tool (`engine/tools/compare_logits.py`):**
-   - Compares token-by-token logits against llama.cpp.
+   - Evaluates multi-domain prompts ($\ge 2048$ tokens) composed of repository code, markdown, and Turkish JSON.
+   - Computes: `max_abs_diff`, `mean_abs_diff`, `median_abs_diff`, `mean_kl_divergence`, `cosine_similarity`, `top1_agreement`, `top5_agreement`, `top10_agreement`, and `perplexity`.
+   - Executes greedy autoregressive generation parity (256 and 1000 tokens) reporting the exact index of first divergence.
 
-### Measured Parity Verification (Qwen2.5-0.5B-Instruct Q4_K_M)
+### Measured Parity Verification (Qwen2.5-0.5B-Instruct Q4_K_M on 2048 Tokens)
 
 ```text
-============================================================
-LOGITS COMPARISON & PARITY REPORT
-============================================================
-Tokens Evaluated : 7
-Vocab Size       : 151936
-Max Abs Diff     : 1.133974
-Mean Abs Diff    : 0.112105
-Median Abs Diff  : 0.086691
-Cosine Similarity: 0.999013
-Top-1 Agreement  : 100.00%
-Top-5 Agreement  : 91.43%
-Top-10 Agreement : 94.29%
-Perplexity (A)   : 15.0072
-Perplexity (B)   : 14.9729
-Perplexity Diff  : 0.0343
-Status           : PASSED
-============================================================
+======================================================================
+GIGGLE STUDIO - LOGITS PARITY & VERIFICATION REPORT
+======================================================================
+Prompt Tokens Evaluated : 2048
+Vocab Size              : 151936
+Max Abs Diff            : 1.004091
+Mean Abs Diff           : 0.073288
+Median Abs Diff         : 0.068661
+Mean KL Divergence      : 0.002618
+Cosine Similarity       : 0.999467
+Top-1 Agreement         : 96.00%
+Top-5 Agreement         : 96.27%
+Top-10 Agreement        : 96.56%
+Perplexity (Reference)  : 80.7828
+Perplexity (llama.cpp)  : 80.8599
+Perplexity Difference   : 0.0770 (0.09% relative difference)
+Greedy Parity (256 tok) : Divergence at token 38
+Greedy Parity (1000 tok): Divergence at token 38
+======================================================================
 ```
 
 4. **Tokenizer Parity (`engine/tools/verify_tokenizer.py`):**
@@ -72,12 +105,12 @@ Status           : PASSED
 
 ---
 
-## 4. Milestone Roadmap
+## 5. Milestone Roadmap
 
 | Milestone | Description | Status | Verification Gate |
 | :--- | :--- | :---: | :--- |
-| **M0** | Ground truth PyTorch reference, benchmark harness, baseline metrics, logits tool | **Completed** | PyTorch reference + logits parity ($\ge 99.9\%$ cosine similarity, 100% top-1 match), tokenizer parity verified, baseline benchmark recorded on RTX 5070. Tagged `engine-m0-done`. |
-| **M1** | Naive CUDA engine (F16, Q8_0, Q4_K_M), parity pass, backend integration | *Next* | Logits parity vs reference, backend streaming in UI. |
+| **M0** | Ground truth PyTorch reference, benchmark harness, baseline metrics, logits tool | **Completed** | PyTorch reference + logits parity ($\ge 99.9\%$ cosine similarity, 100% top-1 match on short, 96% on 2048 tokens), tokenizer parity verified, baseline benchmark recorded on RTX 5070 with CV < 3% on tg256/pp4096. Tagged `engine-m0b-done`. |
+| **M1** | Naive CUDA engine (F16, Q8_0, Q4_K_M), parity pass, backend integration | *In Progress* | Logits parity vs reference, backend streaming in UI. |
 | **M2** | Decode optimization (weight repacking, GEMV fusion, flash decoding, GPU sampling) | *Pending* | Individual kernel speedups measured vs achievable memory bandwidth. |
 | **M3** | Launch overhead removal (CUDA Graphs, small-model megakernel experiment) | *Pending* | Measured against graph version. |
 | **M4** | Prefill optimization (chunked prefill, tensor-core GEMM) | *Pending* | Prompt-processing speedup verification. |

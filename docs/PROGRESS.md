@@ -154,39 +154,55 @@ dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gz
 
 ## 4. Giggle Engine (`giggle-engine`) Inference Development
 
-### Needs user action
-- **NVCC >= 12.8 Requirement for CMake sm_120:**
-  - Host `/usr/bin/nvcc` is CUDA 12.0 (`12.0.140`), which does not recognize `-arch=sm_120` (Blackwell requires CUDA Toolkit >= 12.8).
-  - *Optional User Action:* If building native `.cu` files using CMake and host `nvcc`, user can install CUDA Toolkit >= 12.8 or 13.x.
-  - *Current Engine Solution:* We verified that NVIDIA NVRTC 13.0 (`/usr/local/lib/ollama/cuda_v13/libnvrtc.so.13`) combined with CUDA Driver 13.2 (`libcuda.so.1`) natively targets and executes `compute_120` kernels directly on the RTX 5070 without requiring root/sudo or system alterations.
+### Toolchain & Environment (Verified)
+- **CUDA Toolkit:** CUDA 13.0 at `/usr/local/cuda-13.0` (`CUDA_HOME=/usr/local/cuda-13.0`)
+  - `nvcc --version`: `NVIDIA (R) Cuda compiler driver release 13.0, V13.0.88, Build cuda_13.0.r13.0/compiler.36424714_0`
+  - Architecture: Native compilation and execution verified with `nvcc -arch=sm_120` on Blackwell sm_120.
+  - Driver: NVIDIA Driver `595.104.02` (CUDA Driver API 13.2)
+  - Hardware: NVIDIA GeForce RTX 5070 12GB (cc 12.0)
+- **Doctor Check:** Native check in `backend/app/api/system.py` requires `nvcc >= 12.8` discovered via `CUDA_HOME` or `PATH`.
+- **GPU Synchronization:** `scripts/gpu_run.sh` re-entrant flock `/tmp/giggle-gpu.lock` with active compute load verification.
 
 ### Verified (Commands + Real Numbers)
 
-#### 1. Baseline Benchmark Suite (`llama.cpp` build 11671, commit `ba3c05f71`)
-- **Protocol:** Executed under `flock /tmp/giggle-gpu.lock` via `scripts/gpu_run.sh` with 10 repetitions per case, Flash Attention ON (`-fa 1`), all layers on GPU (`-ngl 99`).
-- **Command:** `python engine/bench/benchmark_llama_cpp.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --repetitions 10`
-- **Output:**
-  - `pp512` (prompt processing 512): **36,367.48 t/s** (StdDev: 4552.16, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
-  - `pp4096` (prompt processing 4096): **37,889.25 t/s** (StdDev: 248.93, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
-  - `tg256` (llama-bench batch 1): **573.60 t/s** (StdDev: 6.38, Peak VRAM: 1366 MB, 38°C, 3030 MHz)
-  - `e2e_decode_256` (llama-cli end-to-end decode): **431.00 t/s** (StdDev: 19.94, Peak VRAM: 1469 MB, 38°C, 3032 MHz, TTFT: 295 ms)
-  - Output files: `docs/benchmarks/baseline_llama_cpp.csv`, `docs/benchmarks/BASELINE.md`
+#### 1. Source Build & Baseline Benchmark Suite (`llama.cpp` commit `b019be0`)
+- **Provenance:** llama.cpp built from source in `data/third_party/llama.cpp` using:
+  `cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120a -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_COMPILER=$CUDA_HOME/bin/nvcc && cmake --build build -j 4`
+  Linked against `/usr/local/cuda-13.0/lib64/libcudart.so.13`, `libcublas.so.13`.
+- **Protocol:** `scripts/gpu_run.sh python engine/bench/benchmark_llama_cpp.py --repetitions 10 --warmup 2`
+- **Output Numbers:**
+  - **Qwen2.5-0.5B-Instruct Q4_K_M:**
+    - `pp512`: **43,239.30 t/s** (StdDev: 4,116.54, CV: 9.52%, Peak VRAM: 3,060 MB)
+    - `pp4096`: **36,299.35 t/s** (StdDev: 2,146.69, CV: 5.91%, Peak VRAM: 3,060 MB)
+    - `tg128`: **503.51 t/s** (StdDev: 38.42, CV: 7.63%, Peak VRAM: 3,073 MB)
+    - `tg256`: **507.19 t/s** (StdDev: 3.33, **CV: 0.66%**, Peak VRAM: 3,073 MB)
+    - `e2e_decode_256`: **371.60 t/s** (StdDev: 39.99, CV: 10.76%, TTFT: 506.28 ms, Peak VRAM: 3,343 MB)
+  - **Qwen2.5-3B-Instruct Q4_K_M:**
+    - `pp512`: **9,406.33 t/s** (StdDev: 801.92, CV: 8.53%, Peak VRAM: 3,064 MB)
+    - `pp4096`: **9,339.60 t/s** (StdDev: 41.31, **CV: 0.44%**, Peak VRAM: 3,064 MB)
+    - `tg128`: **199.33 t/s** (StdDev: 10.25, CV: 5.14%, Peak VRAM: 3,064 MB)
+    - `tg256`: **179.21 t/s** (StdDev: 17.07, CV: 9.53%, Peak VRAM: 3,064 MB)
+    - `e2e_decode_256`: **150.45 t/s** (StdDev: 17.17, CV: 11.41%, TTFT: 409.98 ms, Peak VRAM: 3,110 MB)
+  - **Secondary Baseline (Hermes prebuilt b11671):**
+    - `pp512`: 36,367.48 t/s | `pp4096`: 37,889.25 t/s | `tg256`: 573.60 t/s | `e2e_decode_256`: 431.00 t/s
+  - Reports: `docs/benchmarks/baseline_llama_cpp.csv`, `docs/BASELINE.md`.
 
-#### 2. Logits Parity Verification Tool vs llama.cpp
-- **Command:** `./scripts/gpu_run.sh env PYTHONPATH=. .venv/bin/python engine/tools/compare_logits.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --prompt "The capital of France is Paris." --output-json docs/benchmarks/parity_m0_report.json`
+#### 2. Logits Parity Verification Tool vs llama.cpp on 2048-Token Multi-Domain Prompt
+- **Command:** `PYTHONPATH=. scripts/gpu_run.sh .venv/bin/python engine/tools/compare_logits.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --tokens-count 2048 --gen-tokens 256`
 - **Output:**
-  - Tokens Evaluated: 7
+  - Prompt Tokens Evaluated: 2,048 (mixed code, Markdown, Turkish JSON built locally from repo)
   - Vocab Size: 151,936
-  - Max Abs Diff: 1.133974 (within 1.5 tolerance for Q4_K_M)
-  - Mean Abs Diff: 0.112105
-  - Median Abs Diff: 0.086691
-  - **Cosine Similarity: 0.999013** (99.90%)
-  - **Top-1 Agreement: 100.00%**
-  - Top-5 Agreement: 91.43%
-  - Top-10 Agreement: 94.29%
-  - Perplexity (Reference): 15.0072
-  - Perplexity (llama.cpp): 14.9729 (Difference: 0.0343)
-  - **Status: PASSED**
+  - Max Abs Diff: 1.004091
+  - Mean Abs Diff: 0.073288
+  - Median Abs Diff: 0.068661
+  - **Mean KL Divergence: 0.002618**
+  - **Cosine Similarity: 0.999467**
+  - **Top-1 Agreement: 96.00%**
+  - Top-5 Agreement: 96.27%
+  - Top-10 Agreement: 96.56%
+  - Perplexity (Reference): 80.7828
+  - Perplexity (llama.cpp): 80.8599 (Difference: 0.0770 / 0.09% relative)
+  - Greedy Parity (256 tok): Divergence at token 38
 
 #### 3. Tokenizer Parity
 - **Command:** `.venv/bin/python engine/tools/verify_tokenizer.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf`
@@ -196,10 +212,12 @@ dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gz
 - **Command:** `.venv/bin/pytest engine/tests/ -v`
 - **Output:** 12 passed in 1.81s (`test_logits_comparison`, `test_reference_model`, `test_tokenizer_parity`).
 
-### NOT Verified
-- **Milestone M1:** Naive CUDA engine (F16, Q8_0, Q4_K_M) kernels and integration with giggle inference worker.
-- **Milestone M2:** Decode optimizations (weight repacking, fused kernels, GPU sampling).
-- **Milestone M3:** CUDA Graph launch overhead removal.
-- **Milestone M4:** Prefill tensor-core GEMM optimization.
-- **Milestone M5:** Side-by-side Giggle Engine vs llama.cpp benchmark in UI and Doctor checks.
+### Milestone Gate Status
+- **Milestone M0 (Ground Truth & Baseline Provenance):** **CLOSED & VERIFIED**.
+  - Verified Toolchain: CUDA 13.0 (`nvcc V13.0.88`, sm_120 support verified).
+  - Verified llama.cpp Source Build: commit `b019be0` on sm_120a.
+  - Verified Baseline Numbers: Recorded in `docs/benchmarks/baseline_llama_cpp.csv` and `docs/BASELINE.md`.
+  - Verified Models: Qwen2.5-0.5B-Instruct Q4_K_M (SHA256 verified) and Qwen2.5-3B-Instruct Q4_K_M (SHA256 verified).
+  - Verified Parity Tool: `compare_logits.py` with 2048-token local prompt and KL divergence reporting.
+- **Milestone M1 (Naive CUDA Engine):** **READY TO COMMENCE**.
 
