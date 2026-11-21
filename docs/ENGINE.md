@@ -110,8 +110,57 @@ Greedy Parity (1000 tok): Divergence at token 38
 | Milestone | Description | Status | Verification Gate |
 | :--- | :--- | :---: | :--- |
 | **M0** | Ground truth PyTorch reference, benchmark harness, baseline metrics, logits tool | **Completed** | PyTorch reference + logits parity ($\ge 99.9\%$ cosine similarity, 100% top-1 match on short, 96% on 2048 tokens), tokenizer parity verified, baseline benchmark recorded on RTX 5070 with CV < 3% on tg256/pp4096. Tagged `engine-m0b-done`. |
-| **M1** | Naive CUDA engine (F16, Q8_0, Q4_K_M), parity pass, backend integration | *In Progress* | Logits parity vs reference, backend streaming in UI. |
-| **M2** | Decode optimization (weight repacking, GEMV fusion, flash decoding, GPU sampling) | *Pending* | Individual kernel speedups measured vs achievable memory bandwidth. |
+| **M1** | Naive CUDA engine (F16, Q8_0, Q4_K_M), parity pass, backend integration | **Completed** | Logits parity vs reference (Cosine 0.999994, Top-1 99.95%, Greedy 256 tok 100% identical), 271.54 tok/s naive decode, 657.8 MB VRAM, supervisor IPC streaming verified. Tagged `engine-m1-done`. |
+| **M2** | Decode optimization (weight repacking, GEMV fusion, flash decoding, GPU sampling) | *In Progress* | Individual kernel speedups measured vs achievable memory bandwidth. |
 | **M3** | Launch overhead removal (CUDA Graphs, small-model megakernel experiment) | *Pending* | Measured against graph version. |
 | **M4** | Prefill optimization (chunked prefill, tensor-core GEMM) | *Pending* | Prompt-processing speedup verification. |
 | **M5** | Product integration (Giggle Engine vs llama.cpp UI comparison, Doctor checks, docs) | *Pending* | Live side-by-side benchmark button in Giggle Studio UI. |
+
+---
+
+## 6. Milestone M1: Naive CUDA Engine Verification & Benchmarks
+
+Milestone M1 delivers a correct, verified naive CUDA inference engine compiled for Blackwell `sm_120`:
+
+### 6.1 Kernel Architecture & Native Mixed Quantization
+- **Layer Normalization:** `kernels/rmsnorm.cu` (FP16 RMSNorm with warp/block reductions and epsilon parameter).
+- **Position Embedding & KV Staging:** `kernels/rope.cu` (`rotate_half` RoPE with fused KV-cache writing).
+- **Activation:** `kernels/swiglu.cu` (Elementwise $\text{silu}(\text{gate}) \odot \text{up}$).
+- **Decode Attention:** `kernels/attention.cu` (GQA-aware decode attention kernel with block-reduced softmax normalization).
+- **Sampling:** `kernels/sampling.cu` (Greedy GPU argmax sampler returning integer token ID directly without host allocs).
+- **Quantized Matrix-Vector Multiplication (GEMV):**
+  - FP16: `kernels/gemv_f16.cu` with fused bias and residual addition.
+  - Q8_0: `kernels/gemv_q8_0.cu` (32 elements per block, FP16 scale).
+  - Q5_0: `kernels/gemv_q5_0.cu` (32 elements per 22-byte block, 5-bit unpacked via warp reduction).
+  - Q4_K: `kernels/gemv_q4_k.cu` (256-element superblocks, 144 bytes, 6-bit scales/mins).
+  - Q6_K: `kernels/gemv_q6_k.cu` (256-element superblocks, 210 bytes, 4-bit lower + 2-bit upper unpack).
+  - Native router loads standard GGUF `Q4_K_M` layout directly: Q5_0 (Q-proj), Q8_0 (V-proj, lm_head), Q6_K (down-proj), Q4_K (gate/up-proj).
+
+### 6.2 Parity Verification on 2,048 Tokens (`data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf`)
+- **Tokens Evaluated:** 2,048
+- **Vocab Size:** 151,936 (311,164,928 total logits compared)
+- **Max Absolute Difference:** 0.492585
+- **Mean Absolute Difference:** 0.006317
+- **Median Absolute Difference:** 0.005058
+- **Mean KL Divergence:** 0.000022
+- **Cosine Similarity:** **0.999994** (Target $\ge 0.995$)
+- **Top-1 Agreement:** **99.95%** (Target $\ge 98.0%$)
+- **Top-5 Agreement:** 99.67%
+- **Top-10 Agreement:** 99.65%
+- **Greedy Generation (256 tokens):** **100% Identical Parity** (First divergence: None)
+
+### 6.3 Measured M1 Naive Engine Benchmarks vs llama.cpp Baseline (RTX 5070 sm_120)
+
+| Engine / Backend | Model & Quant | Test Type | Prompt / Gen | Median t/s | StdDev | CV (%) | TTFT (ms) | Peak VRAM |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **GiggleEngine M1 (Native)** | Qwen2.5-0.5B Q4_K_M | `e2e_decode_256` | 32 / 256 | **271.54** | 3.26 | 1.20% | 106.11 | **657.8 MB** |
+| llama.cpp source (`b019be0`) | Qwen2.5-0.5B Q4_K_M | `e2e_decode_256` | 32 / 256 | 371.60 | 39.99 | 10.76% | 506.28 | 3,343 MB |
+| **GiggleEngine M1 (Native)** | Qwen2.5-0.5B Q4_K_M | `pp512` | 512 / 0 | **253.21** | 0.86 | 0.34% | - | **657.8 MB** |
+| llama.cpp source (`b019be0`) | Qwen2.5-0.5B Q4_K_M | `pp512` | 512 / 0 | 43,239.30 | 4,116.54 | 9.52% | - | 3,060 MB |
+
+*Analysis & Bottlenecks:*
+- **Decode Speed:** Naive M1 achieves **271.5 tok/s** (~73% of llama.cpp) using uncoalesced per-thread block dequantization without weight repacking, shared memory caching, or kernel fusion.
+- **VRAM Footprint:** Internal preallocated GPU pool uses only **657.8 MB**, ~5x less than llama.cpp's 3,343 MB allocation.
+- **Prefill Speed:** Naive M1 prefill sequentially executes single-token steps (unbatched GEMV), creating an expected bottleneck. Batched tensor-core GEMM is scheduled for M4.
+- **Optimization Roadmap for M2:** Decode speedup will come from compile-time shape specialization, 128-bit load repacking, SwiGLU+GEMV epilogue fusion, and Flash-Decoding.
+

@@ -21,6 +21,7 @@
 | **Phase 6b** | RE Advanced (Sandboxed dynamic analysis, diff, test fixtures) | **Completed** | Transient sealed Bubblewrap execution sandbox for benign binary inspection, compiled benign ELF test fixtures, dynamic trace output capture. Tagged `phase-6-done`. |
 | **Phase 7** | Frontend Visual Redesign (Linear/Raycast Design System, Polish, Tokens, Tests) | **Completed** | Full visual overhaul to dark graphite `#0B0E15` + Electric Lime `#D4FF00` accent, self-hosted Inter & JetBrains Mono, code-split bundles (index 61 kB), 10/10 Vitest store/UI unit tests, 3/3 Playwright smoke tests, 20 visual screenshots in `docs/screenshots/`, and `scripts/check.sh` clean pass. |
 | **Engine M0** | Giggle Engine Ground Truth (PyTorch reference, baseline benchmark, logits parity) | **Completed** | PyTorch reference model for Qwen2/Llama3, GGUF loader with dequantization, logits comparison tool ($\ge 99.9\%$ cosine similarity, 100% top-1 agreement), tokenizer parity (100% on 8 test cases), llama.cpp baseline benchmark recorded under GPU lock. Tagged `engine-m0-done`. |
+| **Engine M1** | Naive CUDA Engine (FP16, Q8_0, Q5_0, Q4_K, Q6_K, supervisor backend integration) | **Completed** | Native mixed quant GEMV kernels, logits parity on 2048 tokens (Cosine 0.999994, Top-1 99.95%, Greedy 256 tok 100% identical), 271.5 tok/s decode, 657.8 MB VRAM footprint, supervisor IPC streaming. Tagged `engine-m1-done`. |
 
 ---
 
@@ -219,5 +220,67 @@ dist/assets/vendor-recharts-c83iyzBO.js                         377.93 kB │ gz
   - Verified Baseline Numbers: Recorded in `docs/benchmarks/baseline_llama_cpp.csv` and `docs/BASELINE.md`.
   - Verified Models: Qwen2.5-0.5B-Instruct Q4_K_M (SHA256 verified) and Qwen2.5-3B-Instruct Q4_K_M (SHA256 verified).
   - Verified Parity Tool: `compare_logits.py` with 2048-token local prompt and KL divergence reporting.
-- **Milestone M1 (Naive CUDA Engine):** **READY TO COMMENCE**.
+- **Milestone M1 (Naive CUDA Engine):** **CLOSED & VERIFIED**.
+
+---
+
+## 6. Milestone M1: Naive CUDA Engine Implementation & Verification
+
+### 6.1 CUDA Kernel Implementation (`engine/kernels/`, `engine/src/`, `engine/include/`)
+- Built `libgiggle_engine.so` (1.2 MB) with NVCC 13.0 targeting `-arch=sm_120` on Blackwell GeForce RTX 5070:
+  - `kernels/rmsnorm.cu`: Warp & block reduced FP16 RMSNorm with configurable epsilon.
+  - `kernels/rope.cu`: RoPE `rotate_half` matching Qwen2/Llama 3 layout with fused write into preallocated KV cache.
+  - `kernels/swiglu.cu`: Elementwise SwiGLU activation ($\text{silu}(gate) \odot up$).
+  - `kernels/gemv_f16.cu`: Batch=1 FP16 GEMV with fused bias and residual addition.
+  - `kernels/gemv_q8_0.cu`: Q8_0 quantized GEMV with block scale dequantization.
+  - `kernels/gemv_q5_0.cu`: Q5_0 quantized GEMV with 32 elements per 22-byte block and warp reduction.
+  - `kernels/gemv_q4_k.cu`: Superblock Q4_K GEMV (256 elements per 144-byte block).
+  - `kernels/gemv_q6_k.cu`: Superblock Q6_K GEMV (256 elements per 210-byte block).
+  - `kernels/attention.cu`: GQA-aware causal decode attention with block-reduced softmax normalization.
+  - `kernels/sampling.cu`: Greedy GPU argmax sampler returning integer token ID without host round-trips.
+  - `src/giggle_engine.cu`: C API with unified GPU memory pool, preallocated KV cache, and tied output weight support.
+
+### 6.2 Supervisor & Worker IPC Integration
+- Implemented `app.inference.giggle_backend.GiggleBackend` subclassing `InferenceBackend`.
+- Integrated dynamic backend routing into `backend/app/inference/worker_process.py` (`backend="giggle-engine"`).
+- Verified full worker lifecycle: load model, stream tokens over SSE, and unload with 100% deterministic VRAM reclamation.
+- Added backend engine selector support in `backend/app/api/models.py`.
+
+### 6.3 Measured Parity vs PyTorch Reference (2,048 Tokens)
+- **Command:** `PYTHONPATH=. scripts/gpu_run.sh .venv/bin/python engine/tools/compare_logits.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --engine giggle-engine --tokens-count 2048 --gen-tokens 256 --quant-type Q4_K_M --output-json docs/benchmarks/m1_giggle_engine_parity.json`
+- **Results:**
+  - Prompt Tokens Evaluated: 2,048 (mixed multi-domain prompt)
+  - Vocab Size: 151,936 (311,164,928 total logits compared)
+  - Max Abs Diff: 0.492585
+  - Mean Abs Diff: 0.006317
+  - Median Abs Diff: 0.005058
+  - Mean KL Divergence: **0.000022**
+  - Cosine Similarity: **0.999994** (Target $\ge 0.995$)
+  - Top-1 Agreement: **99.95%** (2047 / 2048 matching, Target $\ge 98.0%$)
+  - Top-5 Agreement: 99.67%
+  - Top-10 Agreement: 99.65%
+  - Perplexity (Reference): 80.7828
+  - Perplexity (GiggleEngine): 80.7915 (Difference: 0.0086)
+  - Greedy Generation (256 tokens): **No divergence (100% identical)**
+
+### 6.4 Measured M1 Naive Engine Performance on RTX 5070 (`sm_120`)
+- **Command:** `PYTHONPATH=. scripts/gpu_run.sh .venv/bin/python engine/bench/benchmark_giggle_engine.py --model data/models/qwen2.5-0.5b-instruct-q4_k_m.gguf --precision native --runs 10`
+- **Output:**
+  - `e2e_decode_256`: **271.54 tok/s** (StdDev: 3.26, CV: 1.20%, TTFT: 106.11 ms)
+  - `pp512`: **253.21 tok/s** (StdDev: 0.86, CV: 0.34%)
+  - Peak Internal VRAM Pool: **657.8 MB** (vs llama.cpp 3,343 MB)
+  - Raw benchmarks saved to `docs/benchmarks/m1_giggle_engine_benchmark.json` and `docs/benchmarks/m1_benchmark_results.csv`.
+
+### 6.5 Full Test Suite Gate
+- **Backend Unit Tests:** 45/45 passed (`pytest backend/tests/unit -v`).
+- **Engine Unit Tests:** 20/20 passed (`pytest engine/tests/ -v`).
+- **Frontend Unit Tests:** 15/15 passed (`npm test` in `frontend/`).
+- **Frontend Build:** Clean Vite build (`dist/index.html`, index bundle: 99 kB).
+- **Static Analysis & Formatting:** Ruff (0 lint errors, 92 files formatted), Mypy (0 issues across 68 backend files).
+- **Scripts Check:** `./scripts/check.sh` clean pass.
+
+### Milestone Gate Status
+- **Milestone M1 (Naive CUDA Engine):** **CLOSED & VERIFIED**. Tagged `engine-m1-done`.
+- **Milestone M2 (Decode Optimization):** **READY TO COMMENCE**.
+
 

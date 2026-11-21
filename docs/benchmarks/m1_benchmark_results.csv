@@ -1,0 +1,3 @@
+timestamp,model_name,backend,precision,test_type,prompt_tokens,gen_tokens,runs_count,median_tps,stddev_tps,cv_percent,min_tps,max_tps,ttft_ms,peak_vram_mb,engine_allocated_mb,avg_temp_c,avg_sm_clock_mhz
+2026-11-21 17:46:38,qwen2.5-0.5b-instruct-q4_k_m.gguf,giggle-engine,native,e2e_decode_256,32,256,10,271.54,3.26,1.2,261.96,273.79,106.11,3501.0,657.8,45.3,3016.5
+2026-11-21 17:46:38,qwen2.5-0.5b-instruct-q4_k_m.gguf,giggle-engine,native,pp512,512,0,10,253.21,0.86,0.34,250.86,254.09,0.0,3501.0,657.8,45.3,3016.5

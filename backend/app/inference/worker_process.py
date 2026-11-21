@@ -5,6 +5,8 @@ import traceback
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+from app.inference.base import InferenceBackend
+from app.inference.giggle_backend import GiggleBackend
 from app.inference.llama_backend import LlamaCppBackend
 from app.inference.protocol import (
     WorkerResponse,
@@ -19,7 +21,7 @@ def emit_response(resp: WorkerResponse) -> None:
 
 
 def main() -> None:
-    backend = LlamaCppBackend()
+    backend: InferenceBackend = LlamaCppBackend()
     emit_response(
         WorkerResponse(status="ok", data={"msg": "Worker process ready", "pid": os.getpid()})
     )
@@ -42,6 +44,16 @@ def main() -> None:
                 if not model_path:
                     emit_response(WorkerResponse(status="error", error="Missing model_path"))
                     continue
+
+                requested_backend = cmd.payload.get("backend", "llama-cpp")
+                if requested_backend == "giggle-engine":
+                    if not isinstance(backend, GiggleBackend):
+                        backend.unload()
+                        backend = GiggleBackend()
+                else:
+                    if not isinstance(backend, LlamaCppBackend):
+                        backend.unload()
+                        backend = LlamaCppBackend()
 
                 load_res = backend.load(model_path, cmd.payload)
                 emit_response(WorkerResponse(status="ok", data=load_res))

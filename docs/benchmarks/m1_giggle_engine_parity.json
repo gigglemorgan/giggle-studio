@@ -1,0 +1,19 @@
+{
+  "num_tokens": 2048,
+  "vocab_size": 151936,
+  "max_abs_diff": 0.4925847053527832,
+  "mean_abs_diff": 0.0063174683925808495,
+  "median_abs_diff": 0.005058209644630551,
+  "mean_kl_divergence": 2.1860336383095272e-05,
+  "cosine_similarity": 0.999994317709934,
+  "top1_agreement": 0.99951171875,
+  "top5_agreement": 0.9966796874999996,
+  "top10_agreement": 0.9965332031250012,
+  "perplexity_ref": 80.78283765058437,
+  "perplexity_llama": 80.79146171704924,
+  "first_divergence_256": null,
+  "first_divergence_1000": null,
+  "passed": true,
+  "failures": [],
+  "details": null
+}

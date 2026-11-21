@@ -16,6 +16,9 @@ router = APIRouter(prefix="/models", tags=["Models"])
 
 
 class LoadModelRequest(BaseModel):
+    backend: str = "llama-cpp"  # "llama-cpp" or "giggle-engine"
+    backend_engine: str | None = None  # Frontend alias
+    precision: str = "native"  # "native", "f16", "q8_0", "q4_k_m" (for giggle-engine)
     n_gpu_layers: int = 0
     n_ctx: int = 4096
     n_batch: int = 512
@@ -73,7 +76,10 @@ async def load_model(
     session: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """Loads model with requested offload parameters."""
-    return await ModelService.load_active_model(session, model_id, req.model_dump())
+    cfg = req.model_dump()
+    if req.backend_engine:
+        cfg["backend"] = "giggle-engine" if "giggle" in req.backend_engine.lower() else "llama-cpp"
+    return await ModelService.load_active_model(session, model_id, cfg)
 
 
 @router.post("/unload")
